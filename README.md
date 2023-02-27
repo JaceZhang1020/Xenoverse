@@ -8,8 +8,6 @@ In-Context Learning entails a different learning process than that of gradient d
 
 - [MazeWorlds](l3c/mazeworld): 2D/3D maze generators for task generalization
 
-- [LocoCrowds](l3c/lococrowds): Locomotion simulator with diverse geometries
-
 - [MetaLM](l3c/metalm): Meta language model dataset
 
 - [Bandits](l3c/bandits): Bandits task generalization
