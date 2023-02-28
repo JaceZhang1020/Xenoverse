@@ -49,8 +49,7 @@ setup(
         'Pillow>=6.2.2',
         'six>=1.12.0',
         'pygame>=2.0.2dev2',
-        'numba>=0.55.0',
-        'pybullet>=3.0.7'
+        'numba>=0.55.0'
     ],
     extras_require={},
     zip_safe=False,
