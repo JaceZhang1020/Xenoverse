@@ -53,7 +53,7 @@ pip install l3c[mazeworld]
 
 ```bash
 git clone https://github.com/FutureAGI/L3C
-cd MetaGym
+cd l3c
 pip install .[mazeworld]
 ```
 
