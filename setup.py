@@ -43,12 +43,13 @@ setup(
     tests_require=['pytest', 'mock'],
     include_package_data=True,
     install_requires=[
+        'python>=3.7',
         'gym>=0.18.0',
         'numpy>=1.16.4',
         'Pillow>=6.2.2',
         'six>=1.12.0',
         'pygame>=2.0.2dev2',
-        'numba>=0.54.0',
+        'numba>=0.55.0',
         'pybullet>=3.0.7'
     ],
     extras_require={},
