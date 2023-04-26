@@ -1,4 +1,4 @@
-#   Copyright (c) 2018 PaddlePaddle Authors. All Rights Reserved.
+#   Copyright (c) 2022 DeepEvolution Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 import io
 from setuptools import setup, find_packages
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 with io.open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
@@ -40,10 +40,10 @@ setup(
         './lococrowds/envs/assets/*.png',
         ]
     },
+    python_requires='>=3.7',
     tests_require=['pytest', 'mock'],
     include_package_data=True,
     install_requires=[
-        'python>=3.7',
         'gym>=0.18.0',
         'numpy>=1.16.4',
         'Pillow>=6.2.2',
