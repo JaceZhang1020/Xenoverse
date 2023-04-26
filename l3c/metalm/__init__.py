@@ -13,15 +13,26 @@
 # limitations under the License.
 
 from gym.envs.registration import register
-from l3c.metalm.metalm import MetaLM
+from l3c.metalm.metalmv1 import MetaLMv1
+from l3c.metalm.metalmv2 import MetaLMv2
 
 register(
-    id='meta-lm-v0',
-    entry_point='l3c.metalm:MetaLM',
+    id='meta-lm-v1',
+    entry_point='l3c.metalm:MetaLMv1',
     kwargs={"V": 64,
         "n": 10,
         "l": 64,
         "e": 0.10,
+        "L": 2048
+    }
+)
+
+register(
+    id='meta-lm-v2',
+    entry_point='l3c.metalm:MetaLMv2',
+    kwargs={"V": 64,
+        "n": 16,
+        "N": 16,
         "L": 2048
     }
 )
