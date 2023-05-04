@@ -100,3 +100,19 @@ class MetaLMv2(gym.Env):
             output_stream.write("\n")
         if(need_close):
             output_stream.close()
+
+    @property
+    def VocabSize(self):
+        return self.V + 1
+
+    @property
+    def SepID(self):
+        raise Exception("Sep ID is not available in v2")
+
+    @property
+    def MaskID(self):
+        return 0
+
+    @property
+    def PaddingID(self):
+        return 0

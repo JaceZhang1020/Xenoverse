@@ -69,8 +69,8 @@ batch_obs, batch_label = env.batch_generator(batch_size) # generate observations
 
 ## To generate data to file
 ```bash
-python -m l3c.metalm.data_generator --version v1 --vocab_size 64 --elements_length 64 --elements_number 10 --error_rate 0.10 --sequence_length 4096 --samples 2 --output v1.txt
-python -m l3c.metalm.data_generator --version v2 --vocab_size 64 --hidden_size 10 --sequence_length 4096 --samples 2 --output v2.txt
+python -m l3c.metalm.data_generator --version v1 --vocab_size 256 --elements_length 64 --elements_number 10 --error_rate 0.10 --sequence_length 4096 --samples 2 --output demo.v1.txt
+python -m l3c.metalm.data_generator --version v2 --vocab_size 256 --hidden_size 16 --embedding_size 16 --sequence_length 4096 --samples 2 --output demo.v2.txt
 ```
 
 # Demonstration
