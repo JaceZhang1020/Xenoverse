@@ -28,7 +28,7 @@ $MetaLM_v2(V, n, L)$ data generator generates the sequence by the following step
 - 1.Randomly sample a n-dimensional ARNN $p_{\theta}$; Sample random embedding vectors for each token $e_i \in \mathbb{R}^{n}$, $i\in[1,V]$; Sample a random start token $x_0 \in [1,V]$
 - 2.At step $l$, use $p_{\theta}$ to sample $x_l$ by processing $x_0$ to $x_{l-1}$, util $l \leq L$.
 
-The meta langauge model try to predict:  $p(x_{l+1} \| x_{l}, x_{l-1}, ..., x_{1})$, and should do better as $l$ increases. 
+The meta language model try to predict:  $p(x_{l+1} \| x_{l}, x_{l-1}, ..., x_{1})$, and should do better as $l$ increases. 
 
 ### Motivation
 
@@ -70,7 +70,7 @@ batch_obs, batch_label = env.batch_generator(batch_size) # generate observations
 ## To generate data to file
 ```bash
 python -m l3c.metalm.data_generator --version v1 --vocab_size 256 --elements_length 64 --elements_number 10 --error_rate 0.10 --sequence_length 4096 --samples 2 --output demo.v1.txt
-python -m l3c.metalm.data_generator --version v2 --vocab_size 256 --hidden_size 16 --embedding_size 16 --sequence_length 4096 --samples 2 --output demo.v2.txt
+python -m l3c.metalm.data_generator --version v2 --vocab_size 256 --hidden_size 16 --embedding_size 16 --error_rate 0.10 --sequence_length 4096 --samples 2 --output demo.v2.txt
 ```
 
 # Demonstration

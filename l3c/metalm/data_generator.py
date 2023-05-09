@@ -46,6 +46,7 @@ if __name__=='__main__':
                 V=args.vocab_size,
                 n=args.embedding_size,
                 N=args.hidden_size,
+                e=args.error_rate,
                 L=args.sequence_length)
 
     if(args.output is None):

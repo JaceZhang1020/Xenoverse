@@ -19,7 +19,7 @@ import gym
 from numpy import random
 
 class RandomRNN(object):
-    def __init__(self, n_emb=16, n_hidden=64, n_vocab=256):
+    def __init__(self, n_emb=16, n_hidden=64, eps=0.10, n_vocab=256):
         self.n_emb = n_emb
         self.n_hidden = n_hidden
         self.n_vocab = n_vocab
@@ -29,6 +29,7 @@ class RandomRNN(object):
         self.b_h = numpy.random.normal(0, 1.0, size=(self.n_hidden))
         self.W_o = numpy.random.normal(0, 1.0, size=(self.n_hidden, self.n_vocab))
         self.b_o = numpy.random.normal(0, 1.0, size=(self.n_vocab))
+        self.eps = eps
 
     def softmax(self, x):
         e_x = numpy.exp(x - numpy.max(x, axis=-1, keepdims=True))
@@ -36,23 +37,26 @@ class RandomRNN(object):
 
     def forward(self, l, batch):
         ind = 0
+
+        # Start token
         s_tok = numpy.random.randint(0, self.n_vocab, size=(batch,))
+
         cur_tok = numpy.copy(s_tok)
+
         h = numpy.zeros((batch, self.n_hidden))
         seqs = []
         while ind < l:
             ind += 1
             i = self.emb[cur_tok]
             h = numpy.tanh(numpy.matmul(i, self.W_i) + numpy.matmul(h, self.W_h) + self.b_h)
+            o = numpy.matmul(h, self.W_o) + self.b_o
 
-            o = self.softmax(numpy.matmul(h, self.W_o) + self.b_o)
-            cum_prob = numpy.cumsum(o, axis=-1) # shape (batch,)
-            r = numpy.random.uniform(size=(batch, 1))
-
-            # argmax finds the index of the first True value in the last axis.
-            cur_tok = numpy.argmax(cum_prob > r, axis=-1)
-            h -= numpy.expand_dims((cur_tok == s_tok).astype(h.dtype), -1) * h
+            tok_greedy = numpy.argmax(o, axis=-1)
+            tok_random = numpy.random.randint(0, self.n_vocab, size=(batch,))
+            tok_select = (numpy.random.rand(batch) < self.eps)
+            cur_tok = numpy.where(numpy.random.rand(batch) < self.eps, tok_random, tok_greedy)
             seqs.append(cur_tok)
+
         return numpy.transpose(numpy.asarray(seqs, dtype="int32"))
 
 class MetaLMv2(gym.Env):
@@ -61,28 +65,31 @@ class MetaLMv2(gym.Env):
     V: vocabulary size
     n: embedding size (input size)
     N: hidden size
+    e: epsilon in epsilon greedy
     L: maximum length
     """
     def __init__(self, 
             V=64, 
             n=4,
             N=4,
+            e=0.10,
             L=4096):
         self.L = int(L)
         self.V = int(V)
         self.n = n
         self.N = N
+        self.eps = e
         assert n > 1 and V > 1 and N > 1 and L > 1 
 
     def data_generator(self):
-        nn = RandomRNN(n_emb = self.n, n_hidden = self.N, n_vocab = self.V)
+        nn = RandomRNN(n_emb = self.n, n_hidden = self.N, n_vocab = self.V + 1, eps=self.eps)
         tokens = nn.forward(self.L + 1, 1)[0]
         feas = tokens[:-1]
         labs = tokens[1:]
         return feas, labs
 
     def batch_generator(self, batch_size):
-        nn = RandomRNN(n_emb = self.n, n_hidden = self.N, n_vocab = self.V)
+        nn = RandomRNN(n_emb = self.n, n_hidden = self.N, n_vocab = self.V + 1, eps=self.eps)
         tokens = nn.forward(self.L + 1, batch_size)
         feas = tokens[:, :-1]
         labs = tokens[:, 1:]
@@ -107,7 +114,8 @@ class MetaLMv2(gym.Env):
 
     @property
     def SepID(self):
-        raise Exception("Sep ID is not available in v2")
+        raise Exception("Not Defined")
+        
 
     @property
     def MaskID(self):
