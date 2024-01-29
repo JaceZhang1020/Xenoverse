@@ -43,13 +43,13 @@ class MetaLMv1(gym.Env):
         self.n = n
         self.e = float(e)
         self.mask_ratio = 0.30
-        assert n > 1 and V > 1 and l > 1 and e > 0 and e < 1 and L > 1
+        assert n >= 1 and V > 1 and l > 1 and e > 0 and e < 1 and L > 1
 
     def add_noise(self, seq):
         """
         Add noise to a sequence, return the new sequence
         """
-        noise_value = random.randint(1, self.V, size=(numpy.shape(seq)), dtype="int32")
+        noise_value = random.randint(0, self.V, size=(numpy.shape(seq)), dtype="int32")
         noise_ratio = (random.random(size=(numpy.shape(seq))) < self.e).astype("int32")
         mask_ratio = (random.random(size=(numpy.shape(seq))) < self.mask_ratio).astype("int32")
         diff = noise_value - seq
@@ -58,20 +58,22 @@ class MetaLMv1(gym.Env):
         new_seq = new_seq * (1 -  mask_ratio * noise_ratio)
         return new_seq
 
-    def elements_generator(self):
+    def elements_generator(self, seed=None):
         elements = []
+        if(seed is not None):
+            numpy.random.seed(seed)
         for _ in range(self.n):
             l_r = max(3, numpy.random.poisson(self.lamb))
-            elements.append(random.randint(1, self.V, size=(l_r), dtype="int32"))
+            elements.append(random.randint(0, self.V, size=(l_r), dtype="int32"))
         return elements
 
-    def data_generator(self):
-        elements = self.elements_generator()
+    def data_generator(self, seed=None):
+        elements = self.elements_generator(seed=seed)
         features = []
         labels = []
         cur_l = 0
         while cur_l < self.L + 1:
-            seq = elements[random.randint(0, self.n-1)]
+            seq = elements[random.randint(0, self.n)]
             fea = self.add_noise(seq)
             sep = numpy.array([self.SepID], dtype="int32")
             features.append(fea)
@@ -83,11 +85,11 @@ class MetaLMv1(gym.Env):
         labels = numpy.concatenate(labels, axis=0).astype("int32")
         return features[:self.L], labels[1:(self.L+1)]
 
-    def batch_generator(self, batch_size):
+    def batch_generator(self, batch_size, seed=None):
         features = []
         labels = []
         for _ in range(batch_size):
-            fea, lab = self.data_generator()
+            fea, lab = self.data_generator(seed=seed)
             features.append(fea.tolist())
             labels.append(lab.tolist())
         features = numpy.asarray(features)
@@ -109,11 +111,11 @@ class MetaLMv1(gym.Env):
 
     @property
     def VocabSize(self):
-        return self.V + 2
+        return self.V
 
     @property
     def SepID(self):
-        return self.V + 1
+        return 0
 
     @property
     def MaskID(self):

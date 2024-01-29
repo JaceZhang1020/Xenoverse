@@ -27,7 +27,8 @@ if __name__=='__main__':
     parser.add_argument('--hidden_size', type=int, default=16)
     parser.add_argument('--elements_length', type=int, default=64)
     parser.add_argument('--elements_number', type=int, default=10)
-    parser.add_argument('--error_rate', type=float, default=0.10)
+    parser.add_argument('--error_rate', type=float, default=0.20)
+    parser.add_argument('--n_gram', type=float, default=3)
     parser.add_argument('--sequence_length', type=int, default=4096)
     parser.add_argument('--samples', type=int, default=100)
     parser.add_argument('--output', type=str, default=None)
@@ -44,7 +45,8 @@ if __name__=='__main__':
     elif(args.version == 'v2'):
         dataset = MetaLMv2(
                 V=args.vocab_size,
-                n=args.embedding_size,
+                n=args.n_gram,
+                d=args.embedding_size,
                 N=args.hidden_size,
                 e=args.error_rate,
                 L=args.sequence_length)

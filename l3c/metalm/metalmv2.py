@@ -19,43 +19,71 @@ import gym
 from numpy import random
 
 class RandomRNN(object):
-    def __init__(self, n_emb=16, n_hidden=64, eps=0.10, n_vocab=256):
+    def __init__(self, batch=1, n_emb=16, n_hidden=64, n_vocab=256, n_gram=3, hardness=5, seed=None):
         self.n_emb = n_emb
         self.n_hidden = n_hidden
         self.n_vocab = n_vocab
-        self.emb = numpy.random.normal(0, 1.0, size=(self.n_vocab, self.n_emb))
-        self.W_i = numpy.random.normal(0, 1.0, size=(self.n_emb, self.n_hidden))
-        self.W_h = numpy.random.normal(0, 1.0, size=(self.n_hidden, self.n_hidden))
-        self.b_h = numpy.random.normal(0, 1.0, size=(self.n_hidden))
-        self.W_o = numpy.random.normal(0, 1.0, size=(self.n_hidden, self.n_vocab))
-        self.b_o = numpy.random.normal(0, 1.0, size=(self.n_vocab))
-        self.eps = eps
+        self.batch = batch
+        self.emb = numpy.random.normal(0, 1.0, size=(self.batch, self.n_vocab, self.n_emb))
+        self.n_gram = n_gram
+        weights = []
+        if(seed is not None):
+            numpy.random.seed(seed)
+        self.weight_i = numpy.random.normal(0, 1.0, size=(self.batch, self.n_gram, self.n_emb, self.n_hidden))
+        self.bias_i = numpy.random.normal(0, 1.0, size=(self.batch, self.n_gram, 1, self.n_hidden))
+        self.weight_o = numpy.random.normal(0, 1.0, size=(self.batch, self.n_hidden, self.n_vocab))
+        self.bias_o = numpy.random.normal(0, 1.0, size=(self.batch, 1, self.n_vocab))
+        self.w_arr = numpy.expand_dims(numpy.arange(self.n_gram), axis=[0, 2, 3])
+        self.hardness = hardness
+
+        self.s_tok = 0
 
     def softmax(self, x):
         e_x = numpy.exp(x - numpy.max(x, axis=-1, keepdims=True))
         return e_x / e_x.sum(axis=-1, keepdims=True)
 
-    def forward(self, l, batch):
+    def forward(self, l):
         ind = 0
 
-        # Start token
-        s_tok = numpy.random.randint(0, self.n_vocab, size=(batch,))
+        def mean_var_norm(i):
+            m_i = numpy.mean(i)
+            m_ii = numpy.mean(i * i)
+            std = numpy.sqrt(m_ii - m_i * m_i)
+            return (1.0 / std) * (i - m_i)
 
-        cur_tok = numpy.copy(s_tok)
+        cur_tok = numpy.full((self.batch,), self.s_tok)
+        idxes = numpy.arange(self.batch)
+        pad_emb = numpy.expand_dims(numpy.array(self.emb[idxes, cur_tok]), axis=1)
+ 
+        h = numpy.zeros((self.batch, self.n_hidden))
 
-        h = numpy.zeros((batch, self.n_hidden))
+        # mark whether there is end token
         seqs = []
+        seqs.append(cur_tok)
+        ppl = 0
+        tok_cnt = 0
+        tok_embs = [pad_emb for _ in range(self.n_gram)]
         while ind < l:
             ind += 1
-            i = self.emb[cur_tok]
-            h = numpy.tanh(numpy.matmul(i, self.W_i) + numpy.matmul(h, self.W_h) + self.b_h)
-            o = numpy.matmul(h, self.W_o) + self.b_o
+            tok_emb = numpy.expand_dims(numpy.array(self.emb[idxes, cur_tok]), axis=1)
+            tok_embs.append(tok_emb)
+            del tok_embs[0]
+            tok_emb = numpy.expand_dims(numpy.concatenate(tok_embs[-self.n_gram:], axis=1), axis=2)
 
-            tok_greedy = numpy.argmax(o, axis=-1)
-            tok_random = numpy.random.randint(0, self.n_vocab, size=(batch,))
-            tok_select = (numpy.random.rand(batch) < self.eps)
-            cur_tok = numpy.where(numpy.random.rand(batch) < self.eps, tok_random, tok_greedy)
+            h = numpy.tanh(numpy.matmul(tok_emb, self.weight_i) + self.bias_i)
+            h = numpy.mean(self.w_arr * h, axis=1)
+            o = numpy.matmul(h, self.weight_o) + self.bias_o
+            o = numpy.squeeze(o, axis=1)
+            o = self.hardness * mean_var_norm(o)
+            exp_o = numpy.exp(o)
+            prob = exp_o / numpy.sum(exp_o, axis=-1, keepdims=True)
+            cur_tok = (prob.cumsum(1) > numpy.random.rand(prob.shape[0])[:,None]).argmax(1)
+            cur_prob = prob[idxes, cur_tok]
+            ppl -= numpy.sum(numpy.log(cur_prob))
+            tok_cnt += cur_prob.shape[0]
+
             seqs.append(cur_tok)
+        print("GT Perplexity: %f" % (ppl / tok_cnt))
 
         return numpy.transpose(numpy.asarray(seqs, dtype="int32"))
 
@@ -63,36 +91,39 @@ class MetaLMv2(gym.Env):
     """
     Pseudo Langauge Generated from RNN models
     V: vocabulary size
-    n: embedding size (input size)
+    d: embedding size (input size)
+    n: n-gram
     N: hidden size
-    e: epsilon in epsilon greedy
+    e: inverse of softmax - temporature
     L: maximum length
     """
     def __init__(self, 
             V=64, 
-            n=4,
-            N=4,
-            e=0.10,
+            n=3,
+            d=16,
+            N=64,
+            e=0.20,
             L=4096):
         self.L = int(L)
         self.V = int(V)
         self.n = n
+        self.d = d
         self.N = N
-        self.eps = e
+        self.hardness = 1.0/e
         assert n > 1 and V > 1 and N > 1 and L > 1 
 
-    def data_generator(self):
-        nn = RandomRNN(n_emb = self.n, n_hidden = self.N, n_vocab = self.V + 1, eps=self.eps)
-        tokens = nn.forward(self.L + 1, 1)[0]
+    def data_generator(self, seed=None):
+        nn = RandomRNN(n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
+        tokens = nn.forward(self.L)[0]
         feas = tokens[:-1]
         labs = tokens[1:]
         return feas, labs
 
-    def batch_generator(self, batch_size):
-        nn = RandomRNN(n_emb = self.n, n_hidden = self.N, n_vocab = self.V + 1, eps=self.eps)
-        tokens = nn.forward(self.L + 1, batch_size)
-        feas = tokens[:, :-1]
-        labs = tokens[:, 1:]
+    def batch_generator(self, batch_size, seed=None):
+        nn = RandomRNN(batch = batch_size, n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
+        tokens = nn.forward(self.L)
+        feas = tokens[:,:-1]
+        labs = tokens[:,1:]
         return feas, labs
 
     def generate_to_file(self, size, output_stream):
@@ -115,7 +146,6 @@ class MetaLMv2(gym.Env):
     @property
     def SepID(self):
         raise Exception("Not Defined")
-        
 
     @property
     def MaskID(self):
