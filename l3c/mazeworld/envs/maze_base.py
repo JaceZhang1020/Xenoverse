@@ -9,6 +9,7 @@ import time
 from pygame import font
 from numpy import random as npyrnd
 from numpy.linalg import norm
+from ray_caster_utils import landmarks_color
 
 class MazeBase(object):
     def __init__(self, **kw_args):
@@ -22,20 +23,61 @@ class MazeBase(object):
         self._cell_texts = task_config.cell_texts
         self._start = task_config.start
         self._n = numpy.shape(self._cell_walls)[0]
-        self._goal = task_config.goal
+        self._cell_landmarks = task_config.cell_landmarks
         self._cell_size = task_config.cell_size
         self._wall_height = task_config.wall_height
         self._agent_height = task_config.agent_height
         self._step_reward = task_config.step_reward
         self._goal_reward = task_config.goal_reward
-        self._food_rewards = task_config.food_rewards
-        self._food_interval = task_config.food_interval
+        self._landmarks_rewards = task_config.landmarks_rewards
+        self._landmarks_coordinates = task_config.landmarks_coordinates
+        self._landmarks_refresh_interval = task_config.landmarks_refresh_interval
+        self._commands_sequence = task_config.commands_sequence
         self._max_life = task_config.max_life
         self._initial_life = task_config.initial_life
+        self._int_max = 100000000
 
         assert self._agent_height < self._wall_height and self._agent_height > 0, "the agent height must be > 0 and < wall height"
         assert self._cell_walls.shape == self._cell_texts.shape, "the dimension of walls must be equal to textures"
         assert self._cell_walls.shape[0] == self._cell_walls.shape[1], "only support square shape"
+
+    def refresh_command(self):
+    """
+    Update the command for selecting the target to navigate
+    At the same time, update the instant_rewards
+    Valid only for ``NAVIGATION`` mode
+    """
+        if(self._command is not None):
+            x,y = self._landmarks_coordinates[self._command]
+            self._instant_rewards[x, y] = 0.0
+
+        self._commands_sequence_idx += 1
+        if(self.commands_sequence_idx > len(self.commands_sequence) - 1):
+            return True
+        self._command = self._commands_sequence[self.commands_sequence_idx]
+        x,y = self._landmarks_coordinates[self._command]
+        self._instant_rewards[x,y] = self._goal_reward
+        return False
+
+    def reach_goal(self):
+        g_x, g_y = self._landmarks_coordinate[self._command]
+        goal = ((g_x == self._agent_grid[0]) and (g_y == self._agent_grid[1]))
+
+    def refresh_landmark_attr(self):
+    """
+    Refresh the landmarks
+        refresh the instant rewards in SURVIVAL mode
+        refresh the view in SURVIVAL mode
+        No need to refresh for NAVIGATION mode
+    """
+        self._cell_active_landmarks = self._cell_landmarks
+        if(self.task_type == "SURVIVAL"):
+            for i, (x,y) in enumerate(self._landmarks_coordinates):
+                self._instant_rewards[x,y] = self._landmarks_rewards[i]
+            idxes = numpy.argwhere(self._landmarks_refresh_countdown <= self._landmarks_refresh_interval)
+            for idx in idxes:
+                x,y = self._landmarks_coordinates
+                self._cell_active_landmarks[x,y] = -1
 
     def reset(self):
         self._agent_grid = numpy.copy(self._start)
@@ -48,16 +90,22 @@ class MazeBase(object):
 
         # Valid in 3D
         self._agent_ori = 0.0
+        self._instant_rewards = numpy.zeros_like(self.cell_landmarks)
+        self._landmarks_refresh_countdown = numpy.full(self._landmarks_rewards.shape, self.int_max)
 
+        # Initialization related to tasks
         if(self.task_type == "SURVIVAL"):
-            self._food_wait_refresh = numpy.zeros_like(self._food_rewards, dtype="int32")
-            self._cur_food_rewards = numpy.copy(self._food_rewards)
-            self._food_revival_count = numpy.copy(self._food_interval)
             self._life = self._initial_life
-            self._cell_transparents = self._cur_food_rewards
-        elif(self.task_type == "ESCAPE"):
-            self._cell_transparents = numpy.zeros_like(self._cell_walls, dtype="int32")
-            self._cell_transparents[self._goal] = 1.0
+            for i, (x,y) in enumerate(self._landmarks_coordinates):
+                self._instant_rewards[x,y] = self._landmarks_rewards[i]
+        elif(self.task_type == "NAVIGATION"):
+            self._commands_sequence_idx = -1
+            self._command = None
+            self.refresh_command()
+        else:
+            raise Exception("No such task type: %s" % self.task_type)
+
+        self.refresh_landmark_attr()
         self.update_observation()
         self.steps = 0
         return self.get_observation()
@@ -67,30 +115,24 @@ class MazeBase(object):
         self._agent_trajectory.append(numpy.copy(self._agent_grid))
         agent_grid_idx = tuple(self._agent_grid)
 
+        # Landmarks refresh countdown update
+        self._landmarks_refresh_countdown -= 1
+        idx = numpy.argwhere(self._landmarks_refresh_countdown <= 0)
+        self._landmarks_refresh_countdown[idx] = self._int_max
+
+        reward = self._instant_rewards[agent_grid_idx] + self._step_reward
+
         if(self.task_type == "SURVIVAL"):
-            if(self._cur_food_rewards[agent_grid_idx] > 1.0e-2):
-                # Get the food
-                reward = self._cur_food_rewards[agent_grid_idx]
-                self._food_wait_refresh[agent_grid_idx] = 1
-                self._cur_food_rewards[agent_grid_idx] = 0.0
-            else:
-                reward = 0.0
-            self._life += reward + self._step_reward
-            self._life = min(self._life, self._max_life)
-            done = self._life < 0.0 or self.episode_is_over()
-
-            # Refresh the food where necessary
-            self._food_revival_count -= self._food_wait_refresh
-            for idxes in numpy.argwhere(self._food_revival_count < 0):
-                tidx = tuple(idxes)
-                self._cur_food_rewards[tidx] = self._food_rewards[tidx]
-                self._food_revival_count[tidx] = self._food_interval[tidx]
-                self._food_wait_refresh[tidx] = 0
-
-        elif(self.task_type == "ESCAPE"):
-            goal = (tuple(self._goal) == agent_grid_idx)
-            reward = self._step_reward + goal * self._goal_reward
-            done = goal or self.episode_is_over() 
+            self._life = min(reward + self._life, self._max_life)
+            landmark_id = self._cell_landmarks[agent_grid_idx]
+            if(landmark_id >= 0 and self._landmarks_refresh_countdown[landmark_id] > self._landmarks_refresh_interval):
+                 self._landmarks_refresh_countdown[landmark_id] = self._landmarks_refresh_interval
+                 self.refresh_landmark_attr()
+            done = self._life < 0.0 or self.episode_steps_limit()
+        elif(self.task_type == "NAVIGATION"):
+            if(self.reach_goal()):
+                done = self.refresh_command()
+            done = done or self.episode_steps_limit()
 
         return reward, done
 
@@ -98,6 +140,9 @@ class MazeBase(object):
         raise NotImplementedError()
 
     def render_init(self, view_size):
+    """
+    Initialize a God View With Landmarks
+    """
         font.init()
         self._font = font.SysFont("Arial", 18)
 
@@ -115,22 +160,26 @@ class MazeBase(object):
         it = numpy.nditer(self._cell_walls, flags=["multi_index"])
         for _ in it:
             x,y = it.multi_index
+            landmarks_id = self._cell_landmarks[x,y]
             if(self._cell_walls[x,y] > 0):
                 pygame.draw.rect(self._surf_god, pygame.Color("black"), (x * self._render_cell_size, view_size - (y + 1) * self._render_cell_size,
                         self._render_cell_size, self._render_cell_size), width=0)
-            if(self.task_type == "ESCAPE" and x == self._goal[0] and y == self._goal[1]):
-                pygame.draw.rect(self._surf_god, pygame.Color("green"), (x * self._render_cell_size, view_size - (y + 1) * self._render_cell_size,
+            if(landmarks_id > -1):
+                pygame.draw.rect(self._surf_god, landmarks_color(landmarks_id), (x * self._render_cell_size, view_size - (y + 1) * self._render_cell_size,
                         self._render_cell_size, self._render_cell_size), width=0)
         logo_god = self._font.render("GodView", 0, pygame.Color("red"))
         self._surf_god.blit(logo_god,(view_size - 90, 5))
 
-    def draw_food(self, scr, offset):
+    def render_dynamic_map(self, scr, offset):
+    """
+    Cover landmarks with white in case it is not refreshed
+    """
         it = numpy.nditer(self._cell_walls, flags=["multi_index"])
         for _ in it:
             x,y = it.multi_index
-            if(self._cur_food_rewards[x,y] > 1.0e-2):
-                f = int(255 - 255 * self._cur_food_rewards[x,y])
-                pygame.draw.rect(scr,  pygame.Color(f, 255, f),
+            landmarks_id = elf._cell_landmarks[x,y]
+            if(landmarks_id > -1 and self._landmarks_refresh_countdown < self._landmarks_refresh_interval):
+                pygame.draw.rect(scr,  pygame.Color(255, 255, 255),
                         (x * self._render_cell_size + offset[0], offset[1] + self._view_size - (y + 1) * self._render_cell_size,
                         self._render_cell_size, self._render_cell_size), width=0)
                 txt_life = self._font.render("Life: %f"%self._life, 0, pygame.Color("red"))
@@ -143,7 +192,7 @@ class MazeBase(object):
         #Paint God View
         self._screen.blit(self._surf_god, (self._view_size, 0))
         if(self.task_type == "SURVIVAL"):
-            self.draw_food(self._screen, (self._view_size, 0))
+            self.render_dynamic_map(self._screen, (self._view_size, 0))
 
         #Paint Agent and Observation
         self.render_observation()
@@ -167,11 +216,11 @@ class MazeBase(object):
         traj_screen.fill(pygame.Color("white"))
         traj_screen.blit(self._surf_god, (0, 0))
 
-        pygame.draw.rect(traj_screen, pygame.Color("red"), 
+        Gpygame.draw.rect(traj_screen, pygame.Color("red"), 
                 (self._agent_grid[0] * self._render_cell_size, self._view_size - (self._agent_grid[1] + 1) * self._render_cell_size,
                 self._render_cell_size, self._render_cell_size), width=0)
         if(self.task_type == "SURVIVAL"):
-            self.draw_food(traj_screen, (0, 0))
+            self.render_dynamic_map(traj_screen, (0, 0))
 
         for i in range(len(self._agent_trajectory)-1):
             p = self._agent_trajectory[i]
@@ -188,7 +237,7 @@ class MazeBase(object):
         else:
             pygame.image.save(traj_screen, file_name)
 
-    def episode_is_over(self):
+    def episode_steps_limit(self):
         return self.steps > self.max_steps-1
 
     def get_cell_center(self, cell):
@@ -202,9 +251,15 @@ class MazeBase(object):
         return [p_x, p_y]
 
     def movement_control(self, keys):
+    """
+    Implement the movement control logic, or ''agent dynamics''
+    """
         raise NotImplementedError()
 
     def update_observation(self):
+    """
+    Update the observation, which is used for returning the state when ''get_observation''
+    """
         raise NotImplementedError()
 
     def get_observation(self):

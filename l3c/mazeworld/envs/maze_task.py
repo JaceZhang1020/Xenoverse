@@ -14,7 +14,7 @@ class MazeTaskManager(object):
     # Configurations that decides a specific task
     TaskConfig = namedtuple("TaskConfig", ["start", "cell_landmarks", "cell_walls", "cell_texts", 
         "cell_size", "wall_height", "agent_height", "initial_life", "max_life",
-        "step_reward", "goal_reward", "landmarks_rewards", "landmarks_refresh_interval", "commands_sequence"])
+        "step_reward", "goal_reward", "landmarks_rewards", "landmarks_coordinates", "landmarks_refresh_interval", "commands_sequence"])
 
     def __init__(self, texture_dir, verbose=False):
         pathes = os.path.split(os.path.abspath(__file__))
@@ -194,6 +194,7 @@ class MazeTaskManager(object):
                 initial_life=initial_life,
                 max_life=max_life,
                 commands_sequence=commands_sequence,
+                landmarks_coordinates=landmarks,
                 landmarks_rewards=landmarks_rewards,
                 landmarks_refresh_interval=landmarks_refresh_interval
                 )

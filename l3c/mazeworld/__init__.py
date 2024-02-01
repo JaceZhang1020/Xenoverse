@@ -26,7 +26,7 @@ register(
         "render_scale": 480,
         "resolution": (256, 256),
         "max_steps": 5000,
-        "task_type": "SURVIVAL"
+        "task_type": "NAVIGATION"
     }
 )
 
@@ -38,7 +38,7 @@ register(
         "render_scale": 480,
         "resolution": (256, 256),
         "max_steps": 200,
-        "task_type": "SURVIVAL"
+        "task_type": "NAVIGATION"
     }
 )
 

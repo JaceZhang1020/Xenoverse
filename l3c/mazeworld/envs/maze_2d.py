@@ -9,6 +9,7 @@ from pygame import font
 from numpy import random as npyrnd
 from numpy.linalg import norm
 from l3c.mazeworld.envs.maze_base import MazeBase
+from ray_caster_utils import landmarks_color
 
 class MazeCore2D(MazeBase):
     def __init__(self, view_grid=2, task_type="SURVIVAL", max_steps=5000):
@@ -34,29 +35,6 @@ class MazeCore2D(MazeBase):
         return reward, done
 
     def visualize_obs(self):
-        w,h = self._observation.shape
-        c_w = w // 2
-        c_h = h // 2
-        obs_array = numpy.full((w,h,3), 255, dtype="int32")
-        obs_array[numpy.where(self._observation < -0.50)] = numpy.asarray([0, 0, 0], dtype="int32")
-        for idxes in numpy.argwhere(self._observation > 0.01):
-            tidx = tuple(idxes)
-            if(tidx==(c_w, c_h)):
-                continue
-            if(self.task_type == "SURVIVAL"):
-                f = int(255 - 255 * self._observation[tidx])
-            elif(self.task_type == "ESCAPE"):
-                f = 0
-            else:
-                f = 255
-            obs_array[tidx] = numpy.asarray([f, 255, f], dtype="int32")
-        if(self.task_type == "SURVIVAL"):
-            f = max(0, int(255 - 128 * self._life))
-            obs_array[c_w, c_h] = numpy.asarray([255, f, f], dtype="int32")
-        else:
-            obs_array[c_w, c_h] = numpy.asarray([255, 0, 0], dtype="int32")
-
-        obs_array = obs_array[:,::-1]
         return obs_array
 
     def render_observation(self):
@@ -89,7 +67,7 @@ class MazeCore2D(MazeBase):
     def update_observation(self):
         #Add the ground first
         #Find Relative Cells
-        self._observation = - numpy.ones(shape=(2 * self.view_grid + 1, 2 * self.view_grid + 1), dtype="float32")
+        observation = - numpy.ones(shape=(2 * self.view_grid + 1, 2 * self.view_grid + 1), dtype="float32")
         x_s = self._agent_grid[0] - self.view_grid
         x_e = self._agent_grid[0] + self.view_grid + 1
         y_s = self._agent_grid[1] - self.view_grid
@@ -110,12 +88,34 @@ class MazeCore2D(MazeBase):
         if(y_e > self._n):
             j_e -= y_e - self._n
             y_e = self._n
-        # Observation: -1 for walls, 1 for goals, > 0 for foods
+        # Observation: -1 for walls, > 0 for landmarks, = 0 for grounds
         self._observation[i_s:i_e, j_s:j_e] = - self._cell_walls[x_s:x_e, y_s:y_e]
-        cur_goal = numpy.zeros((self._n, self._n))
-        cur_goal[tuple(self._goal)] = 1.0
         if(self.task_type == "SURVIVAL"):
-            self._observation[i_s:i_e, j_s:j_e] += self._cur_food_rewards[x_s:x_e, y_s:y_e]
+            self._observation[i_s:i_e, j_s:j_e] += self._cell_active_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
             self._observation[self.view_grid, self.view_grid] = self._life
-        elif(self.task_type == "ESCAPE"):
-            self._observation[i_s:i_e, j_s:j_e] += cur_goal[x_s:x_e, y_s:y_e]
+        elif(self.task_type == "NAVIGATION"):
+            self._observation[i_s:i_e, j_s:j_e] += self._cell_landmarks[x_s:x_e, y_s:y_e] + 1
+
+        w,h = self._observation.shape
+        c_w = w // 2
+        c_h = h // 2
+        obs_array = numpy.full((w,h,3), 255, dtype="int32")
+        obs_array[numpy.where(self._observation < -0.50)] = numpy.asarray([0, 0, 0], dtype="int32")
+        for idxes in numpy.argwhere(self._observation > 0.01):
+            tidx = tuple(idxes)
+            if(tidx==(c_w, c_h)):
+                continue
+            if(self.task_type == "SURVIVAL"):
+                f = int(255 - 255 * self._observation[tidx])
+            elif(self.task_type == "ESCAPE"):
+                f = 0
+            else:
+                f = 255
+            obs_array[tidx] = numpy.asarray([f, 255, f], dtype="int32")
+        if(self.task_type == "SURVIVAL"):
+            f = max(0, int(255 - 128 * self._life))
+            obs_array[c_w, c_h] = numpy.asarray([255, f, f], dtype="int32")
+        else:
+            obs_array[c_w, c_h] = numpy.asarray([255, 0, 0], dtype="int32")
+
+        obs_array = obs_array[:,::-1]
