@@ -19,6 +19,12 @@ class LandmarksRGB(object):
         self._landmarks_rgb[6] = numpy.array([128, 128, 255], dtype="float32") #
         self._landmarks_rgb[7] = numpy.array([128, 255, 128], dtype="float32") #
         self._landmarks_rgb[8] = numpy.array([255, 128, 128], dtype="float32") #
+        self._landmarks_rgb[9] = numpy.array([0, 96, 128], dtype="float32") #
+        self._landmarks_rgb[10] = numpy.array([96, 0, 128], dtype="float32") #
+        self._landmarks_rgb[11] = numpy.array([0, 128, 96], dtype="float32") #
+        self._landmarks_rgb[12] = numpy.array([96, 128, 0], dtype="float32") #
+        self._landmarks_rgb[13] = numpy.array([128, 96, 0], dtype="float32") #
+        self._landmarks_rgb[14] = numpy.array([128, 0, 96], dtype="float32") #
 
     def color(self, i):
         return pygame.Color(int(self._landmarks_rgb[i][0]), int(self._landmarks_rgb[i][1]), int(self._landmarks_rgb[i][2]), 255)
@@ -29,7 +35,7 @@ class LandmarksRGB(object):
 
     @property
     def rgb_npa(self):
-        rgb_arr = numpy.zeros((9, 3), dtype="float32")
+        rgb_arr = numpy.zeros((len(self._landmarks_rgb), 3), dtype="float32")
         for i in self._landmarks_rgb:
             rgb_arr[i] = self._landmarks_rgb[i]
         return rgb_arr
@@ -63,11 +69,13 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
     hit_dist = 0.0
     hit_side = 0
     hit_transparent_list = []
-    if(cell_transparent[hit_i, hit_j] > -1):
-        if(side_dist_x < side_dist_y):
-            hit_transparent_list.append((side_dist_x, hit_i, hit_j, 0, cell_transparent[hit_i, hit_j]))
-        elif(side_dist_x > side_dist_y):
-            hit_transparent_list.append((side_dist_y, hit_i, hit_j, 1, cell_transparent[hit_i, hit_j]))
+
+    #Remove this part as we don't want to see colors when in landmark cells themselves
+    #if(cell_transparent[hit_i, hit_j] > -1):
+    #    if(side_dist_x < side_dist_y):
+    #        hit_transparent_list.append((side_dist_x, hit_i, hit_j, 0, cell_transparent[hit_i, hit_j]))
+    #    elif(side_dist_x > side_dist_y):
+    #        hit_transparent_list.append((side_dist_y, hit_i, hit_j, 1, cell_transparent[hit_i, hit_j]))
 
     while hit_dist < visibility_3D:
         if(side_dist_x < side_dist_y):

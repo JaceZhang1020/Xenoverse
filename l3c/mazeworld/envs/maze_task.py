@@ -58,7 +58,9 @@ class MazeTaskManager(object):
         assert n > 6, "Minimum required cells are 7"
         assert n % 2 != 0, "Cell Numbers can only be odd"
         assert landmarks_number > 1, "There must be at least 1 goal, thus landmarks_number must > 1"
-        assert landmarks_number < 10, "landmarks_number = %d is too much, need to be < 10" % (landmarks_number)
+        if(landmarks_number > 15):
+            landmarks_number = 15
+            print("landmarks number too much, set to 15")
         if(self.verbose):
             print("Generating an random maze of size %dx%d, with allow loops=%s, crowd ratio=%f"%(n, n, allow_loops, wall_density))
         cell_walls = numpy.ones(shape=(n, n), dtype="int32")
