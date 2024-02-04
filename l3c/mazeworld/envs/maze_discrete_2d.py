@@ -9,11 +9,11 @@ from pygame import font
 from numpy import random as npyrnd
 from numpy.linalg import norm
 from l3c.mazeworld.envs.maze_base import MazeBase
-from ray_caster_utils import landmarks_color
+from .ray_caster_utils import landmarks_rgb,landmarks_color
 
-class MazeCore2D(MazeBase):
-    def __init__(self, view_grid=2, task_type="SURVIVAL", max_steps=5000):
-        super(MazeCore2D, self).__init__(
+class MazeCoreDiscrete2D(MazeBase):
+    def __init__(self, view_grid=1, task_type="SURVIVAL", max_steps=5000):
+        super(MazeCoreDiscrete2D, self).__init__(
                 view_grid=view_grid,
                 task_type=task_type,
                 max_steps=max_steps
@@ -34,23 +34,22 @@ class MazeCore2D(MazeBase):
         self.update_observation()
         return reward, done
 
-    def visualize_obs(self):
-        return obs_array
-
     def render_observation(self):
         #Paint Observation
         empty_range = 40
-        obs_surf = pygame.surfarray.make_surface(self.visualize_obs())
+        obs_surf = pygame.surfarray.make_surface(self._observation)
         obs_surf = pygame.transform.scale(obs_surf, (self._view_size - 2 * empty_range, self._view_size - 2 * empty_range))
         self._screen.blit(self._obs_logo,(5, 5))
         self._screen.blit(obs_surf, (empty_range, empty_range))
 
+        # Paint the blue edge for observation
         pygame.draw.rect(self._screen, pygame.Color("blue"), 
                 (empty_range, empty_range,
                 self._view_size - 2 * empty_range, self._view_size - 2 * empty_range), width=1)
-        pygame.draw.rect(self._screen, pygame.Color("red"), 
-                (self._agent_grid[0] * self._render_cell_size + self._view_size, self._view_size - (self._agent_grid[1] + 1) * self._render_cell_size,
-                self._render_cell_size, self._render_cell_size), width=0)
+        # Paint agent in god view map
+        pygame.draw.circle(self._screen, pygame.Color("gray"), 
+                ((self._agent_grid[0] + 0.5) * self._render_cell_size + self._view_size, (self._agent_grid[1] + 0.5) * self._render_cell_size),
+                int(0.40 * self._render_cell_size), width=0)
 
     def movement_control(self, keys):
         #Keyboard control cases
@@ -62,12 +61,14 @@ class MazeCore2D(MazeBase):
             return (0, 1)
         if keys[pygame.K_DOWN]:
             return (0, -1)
-        return (0, 0)
+        if keys[pygame.K_SPACE]:
+            return (0, 0)
+        return None
 
     def update_observation(self):
         #Add the ground first
         #Find Relative Cells
-        observation = - numpy.ones(shape=(2 * self.view_grid + 1, 2 * self.view_grid + 1), dtype="float32")
+        obs_raw = - numpy.ones(shape=(2 * self.view_grid + 1, 2 * self.view_grid + 1), dtype="float32")
         x_s = self._agent_grid[0] - self.view_grid
         x_e = self._agent_grid[0] + self.view_grid + 1
         y_s = self._agent_grid[1] - self.view_grid
@@ -89,33 +90,32 @@ class MazeCore2D(MazeBase):
             j_e -= y_e - self._n
             y_e = self._n
         # Observation: -1 for walls, > 0 for landmarks, = 0 for grounds
-        self._observation[i_s:i_e, j_s:j_e] = - self._cell_walls[x_s:x_e, y_s:y_e]
+        obs_raw[i_s:i_e, j_s:j_e] = - self._cell_walls[x_s:x_e, y_s:y_e]
         if(self.task_type == "SURVIVAL"):
-            self._observation[i_s:i_e, j_s:j_e] += self._cell_active_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
-            self._observation[self.view_grid, self.view_grid] = self._life
+            obs_raw[i_s:i_e, j_s:j_e] += self._cell_active_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
+            obs_raw[self.view_grid, self.view_grid] = self._life
         elif(self.task_type == "NAVIGATION"):
-            self._observation[i_s:i_e, j_s:j_e] += self._cell_landmarks[x_s:x_e, y_s:y_e] + 1
+            obs_raw[i_s:i_e, j_s:j_e] += self._cell_landmarks[x_s:x_e, y_s:y_e] + 1
 
-        w,h = self._observation.shape
+        w,h = obs_raw.shape
+        obs_raw = numpy.expand_dims(obs_raw, axis=-1)
         c_w = w // 2
         c_h = h // 2
-        obs_array = numpy.full((w,h,3), 255, dtype="int32")
-        obs_array[numpy.where(self._observation < -0.50)] = numpy.asarray([0, 0, 0], dtype="int32")
-        for idxes in numpy.argwhere(self._observation > 0.01):
-            tidx = tuple(idxes)
-            if(tidx==(c_w, c_h)):
-                continue
-            if(self.task_type == "SURVIVAL"):
-                f = int(255 - 255 * self._observation[tidx])
-            elif(self.task_type == "ESCAPE"):
-                f = 0
-            else:
-                f = 255
-            obs_array[tidx] = numpy.asarray([f, 255, f], dtype="int32")
-        if(self.task_type == "SURVIVAL"):
-            f = max(0, int(255 - 128 * self._life))
-            obs_array[c_w, c_h] = numpy.asarray([255, f, f], dtype="int32")
-        else:
-            obs_array[c_w, c_h] = numpy.asarray([255, 0, 0], dtype="int32")
+        wall_rgb = numpy.array([0, 0, 0], dtype="int32")
+        empty_rgb = numpy.array([255, 255, 255], dtype="int32")
 
-        obs_array = obs_array[:,::-1]
+        self._observation = ((obs_raw == -1).astype("int32") * wall_rgb + 
+                (obs_raw == 0).astype("int32") * empty_rgb)
+        for i in landmarks_rgb:
+            self._observation += (obs_raw == (i + 1)).astype("int32") * landmarks_rgb[i].astype("int32")
+
+        if(self.task_type == "SURVIVAL"):
+            # For survival task, the color of the center represents its life value
+            f = max(0, int(255 - 128 * self._life))
+            self._observation[c_w, c_h] = numpy.asarray([255, f, f], dtype="int32")
+        elif(self.task_type == "NAVIGATION"):
+            # For navigation task, the color of the center represents the navigation target
+            self._observation[c_w, c_h] = landmarks_rgb[self._command]
+
+        # reverse the y axis
+        self._observation = self._observation[:,::-1]

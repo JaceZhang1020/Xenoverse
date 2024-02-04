@@ -7,7 +7,7 @@ import pygame
 
 from gym import error, spaces, utils
 from gym.utils import seeding
-from l3c.mazeworld.envs.maze_2d import MazeCore2D
+from l3c.mazeworld.envs.maze_discrete_2d import MazeCoreDiscrete2D
 from l3c.mazeworld.envs.maze_continuous_3d import MazeCoreContinuous3D
 from l3c.mazeworld.envs.maze_discrete_3d import MazeCoreDiscrete3D
 
@@ -18,8 +18,9 @@ class MazeWorldDiscrete3D(gym.Env):
             enable_render=True,
             render_scale=480,
             resolution=(320, 320),
-            max_steps = 5000,
-            task_type = "SURVIVAL"
+            max_steps=5000,
+            max_vision_range=12.0,
+            task_type="NAVIGATION",
             ):
 
         self.enable_render = enable_render
@@ -28,7 +29,8 @@ class MazeWorldDiscrete3D(gym.Env):
                 resolution_horizon = resolution[0],
                 resolution_vertical = resolution[1],
                 max_steps = max_steps,
-                task_type = task_type
+                max_vision_range=max_vision_range,
+                task_type = task_type,
                 )
 
         # Turning Left/Right and go backward / forward
@@ -67,10 +69,14 @@ class MazeWorldDiscrete3D(gym.Env):
         else:
             action = DISCRETE_ACTIONS[action]
             
+        # In keyboard control, process only continues when key is pressed
+        info = {"steps": self.maze_core.steps}
+        if(action is None):
+            return self.maze_core.get_observation(), 0, False, info 
         reward, done = self.maze_core.do_action(action)
+
         if(done):
             self.need_reset=True
-        info = {"steps": self.maze_core.steps}
 
         return self.maze_core.get_observation(), reward, done, info
 
@@ -88,7 +94,8 @@ class MazeWorldContinuous3D(gym.Env):
             render_scale=480,
             resolution=(320, 320),
             max_steps = 5000,
-            task_type = "SURVIVAL"
+            max_vision_range=12.0,
+            task_type = "NAVIGATION"
             ):
 
         self.enable_render = enable_render
@@ -97,6 +104,7 @@ class MazeWorldContinuous3D(gym.Env):
                 resolution_horizon = resolution[0],
                 resolution_vertical = resolution[1],
                 max_steps = max_steps,
+                max_vision_range=max_vision_range,
                 task_type = task_type
                 )
 
@@ -136,11 +144,16 @@ class MazeWorldContinuous3D(gym.Env):
         else:
             tr = action[0]
             ws = action[1]
+
+        # In keyboard control, process only continues when key is pressed
+        info = {"steps": self.maze_core.steps}
+        if(tr is None or ws is None):
+            return self.maze_core.get_observation(), 0, False, info 
+
         reward, done = self.maze_core.do_action(tr, ws)
 
         if(done):
             self.need_reset=True
-        info = {"steps": self.maze_core.steps}
 
         return self.maze_core.get_observation(), reward, done, info
 
@@ -152,15 +165,15 @@ class MazeWorldContinuous3D(gym.Env):
     def save_trajectory(self, file_name):
         self.maze_core.render_trajectory(file_name)
 
-class MazeWorld2D(gym.Env):
+class MazeWorldDiscrete2D(gym.Env):
     def __init__(self,
             enable_render=True,
             render_scale=480,
             max_steps = 5000,
-            task_type = "SURVIVAL",
-            view_grid = 2):
+            task_type = "NAVIGATION",
+            view_grid = 3):
         self.enable_render = enable_render
-        self.maze_core = MazeCore2D(view_grid=view_grid, max_steps=max_steps, task_type=task_type)
+        self.maze_core = MazeCoreDiscrete2D(view_grid=view_grid, max_steps=max_steps, task_type=task_type)
         self.render_viewsize = render_scale
 
         # Go EAST/WEST/SOUTH/NORTH
@@ -195,11 +208,15 @@ class MazeWorld2D(gym.Env):
         else:
             action = DISCRETE_ACTIONS[action]
             
+        info = {"steps": self.maze_core.steps}
+        # In keyboard control, process only continues when key is pressed
+        if(action is None):
+            return self.maze_core.get_observation(), 0, False, info 
+
         reward, done = self.maze_core.do_action(action)
 
         if(done):
             self.need_reset=True
-        info = {"steps": self.maze_core.steps}
 
         return self.maze_core.get_observation(), reward, done, info
 

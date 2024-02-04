@@ -5,6 +5,7 @@ from numba import njit
 from l3c.mazeworld.envs.dynamics import PI, PI_4
 
 FAR_RGB = numpy.array([0, 0, 0], dtype="float32")
+A_ARR = PI / 3
 
 class LandmarksRGB(object):
     def __init__(self):
@@ -20,24 +21,41 @@ class LandmarksRGB(object):
         self._landmarks_rgb[8] = numpy.array([255, 128, 128], dtype="float32") #
 
     def color(self, i):
-        return pygame.Color(self._landmarks_rgb[0], self._landmarks_rgb[1], self._landmarks_rgb[2], 255)
+        return pygame.Color(int(self._landmarks_rgb[i][0]), int(self._landmarks_rgb[i][1]), int(self._landmarks_rgb[i][2]), 255)
 
     @property
     def rgb(self):
         return self._landmarks_rgb
 
+    @property
+    def rgb_npa(self):
+        rgb_arr = numpy.zeros((9, 3), dtype="float32")
+        for i in self._landmarks_rgb:
+            rgb_arr[i] = self._landmarks_rgb[i]
+        return rgb_arr
+
 lrgb_handler = LandmarksRGB()
 landmarks_rgb = lrgb_handler.rgb
 landmarks_color = lrgb_handler.color
+landmarks_rgb_arr = lrgb_handler.rgb_npa
 
 @njit(cache=True)
 def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell_transparent, max_vision):
-    delta_dist_x = 1.0e+6 if abs(cos_ori) < 1.0e-6 else abs(cell_size / cos_ori)
-    delta_dist_y = 1.0e+6 if abs(sin_ori) < 1.0e-6 else abs(cell_size / sin_ori)
+    eps = 1.0e-8
+    if(cos_ori < 0):
+        c_sign = -1
+    else:
+        c_sign = 1
+    if(sin_ori < 0):
+        s_sign = -1
+    else:
+        s_sign = 1
+    delta_dist_x = abs(cell_size / eps) if abs(cos_ori) < eps else abs(cell_size / cos_ori)
+    delta_dist_y = abs(cell_size / eps) if abs(sin_ori) < eps else abs(cell_size / sin_ori)
     d_x = ((i + 1) * cell_size - pos[0]) if cos_ori > 0 else (i * cell_size - pos[0])
     d_y = ((j + 1) * cell_size - pos[1]) if sin_ori > 0 else (j * cell_size - pos[1])
-    side_dist_x = 1.0e+6 if abs(cos_ori) < 1.0e-6 else d_x / cos_ori
-    side_dist_y = 1.0e+6 if abs(sin_ori) < 1.0e-6 else d_y / sin_ori
+    side_dist_x = c_sign * (d_x / eps) if abs(cos_ori) < eps else d_x / cos_ori
+    side_dist_y = s_sign * (d_y / eps) if abs(sin_ori) < eps else d_y / sin_ori
     delta_i = 1 if(cos_ori > 0) else -1
     delta_j = 1 if(sin_ori > 0) else -1
     hit_i = i
@@ -48,7 +66,7 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
     if(cell_transparent[hit_i, hit_j] > -1):
         if(side_dist_x < side_dist_y):
             hit_transparent_list.append((side_dist_x, hit_i, hit_j, 0, cell_transparent[hit_i, hit_j]))
-        else:
+        elif(side_dist_x > side_dist_y):
             hit_transparent_list.append((side_dist_y, hit_i, hit_j, 1, cell_transparent[hit_i, hit_j]))
 
     while hit_dist < max_vision:
@@ -56,13 +74,13 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
             hit_i += delta_i
             side_dist_y -= side_dist_x
             hit_dist += side_dist_x
+            if(cell_transparent[hit_i, hit_j] > -1):
+                hit_transparent_list.append((hit_dist, hit_i, hit_j, 0, cell_transparent[hit_i, hit_j]))
             if(hit_i < 0 or hit_i >= cell_number):
                 if(hit_j < 0 or hit_j >= cell_number):
                     hit_dist = 1.0e+6
                     break
             else:
-                if(cell_transparent[hit_i, hit_j] > -1):
-                    hit_transparent_list.append((hit_dist, hit_i, hit_j, 0, cell_transparent[hit_i, hit_j]))
                 if(cell_walls[hit_i, hit_j] > 0):
                     hit_side = 0
                     break
@@ -71,13 +89,13 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
             hit_j += delta_j
             side_dist_x -= side_dist_y
             hit_dist += side_dist_y
+            if(cell_transparent[hit_i, hit_j] > -1):
+                hit_transparent_list.append((hit_dist, hit_i, hit_j, 1, cell_transparent[hit_i, hit_j]))
             if(hit_i < 0 or hit_i >= cell_number):
                 if(hit_j < 0 or hit_j >= cell_number):
                     hit_dist = 1.0e+6
                     break
             else:
-                if(cell_transparent[hit_i, hit_j] > -1):
-                    hit_transparent_list.append((hit_dist, hit_i, hit_j, 1, cell_transparent[hit_i, hit_j]))
                 if(cell_walls[hit_i, hit_j] > 0):
                     hit_side = 1
                     break
@@ -85,13 +103,13 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
     return hit_dist, hit_i, hit_j, hit_side, hit_transparent_list
 
 
+"""
+Depict 3D Maze View
+cell transparent: N X N array, where -1 represents empty, and 0~9 (max = 9 represents different colors of transparency)
+"""
 @njit(cache=True)
 def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts, cell_size, texture_array,
-        ceil_text, ceil_height, text_size, max_vision, l_focal, vision_angle_h, resolution_h, resolution_v):
-        """
-        Depict 3D Maze View
-        cell transparent: N X N array, where -1 represents empty, and 0~9 (max = 9 represents different colors of transparency)
-        """
+        ceil_text, ceil_height, text_size, max_vision, l_focal, vision_angle_h, resolution_h, resolution_v, transparent_rgb):
     vision_screen_half_size_h = numpy.tan(vision_angle_h / 2) * l_focal
     vision_screen_half_size_v = vision_screen_half_size_h * resolution_v / resolution_h
     pixel_size = 2.0 * vision_screen_half_size_h / resolution_h
@@ -104,7 +122,6 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
 
     # prepare some maths
     rgb_array = numpy.zeros(shape=(resolution_h, resolution_v, 3), dtype="int32")
-    transparent_array = numpy.zeros(shape=(resolution_h, resolution_v), dtype="float32")
     rgb_array[:, :] = FAR_RGB
     cos_hp_array = numpy.zeros(shape=(resolution_h,), dtype="float32")
     cos_abs_hp_array = numpy.zeros(shape=(resolution_h,), dtype="float32")
@@ -147,10 +164,6 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
                 d_i *= texture_array[text_id].shape[0]
                 d_j *= texture_array[text_id].shape[1]
                 rgb_array[d_h, d_v, :] = light_incident * (alpha * FAR_RGB + (1.0 - alpha) * texture_array[text_id][int(d_i), int(d_j)])
-                #if(cell_transparent[i, j] > 0):
-                #    transparent_factor = 0.30
-                #    rgb_array[d_h, d_v] = (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * landmarks_rgb[cell_transparent[i,j]]
-                #    transparent_array[d_h, d_v] = 1.0
 
     # paint ceil
     for d_v in range(resolution_v//2):
@@ -174,10 +187,6 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             d_i *= ceil_text.shape[0]
             d_j *= ceil_text.shape[1]
             rgb_array[d_h, d_v, :] = light_incident * (alpha * FAR_RGB + (1.0 - alpha) * ceil_text[int(d_i), int(d_j)])
-            #if(t_i >= 0 and t_i < max_cell_i and t_j >= 0 and t_j < max_cell_j and cell_transparent[t_i, t_j] > 0):
-            #    transparent_factor = 0.30
-            #    rgb_array[d_h, d_v] = (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * landmarks_rgb[t_i, t_j]
-            #    transparent_array[d_h, d_v] = 1.0
     
     # paint wall
     for d_h in range(resolution_h):
@@ -187,8 +196,7 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
                 pos, i, j, max_cell_i, cell_size, cos_abs_hp_array[d_h], sin_abs_hp_array[d_h], 
                 cell_walls, cell_transparent, max_vision)
         hit_transparent.sort(lambda x:x[0], reverse=True)
-        if(hit_dist > max_vision):
-            continue
+
         alpha = min(1.0, max(2.0 * hit_dist / max_vision - 1.0, 0.0))
         text_id = cell_texts[hit_i,hit_j]
         hit_pt_x = hit_dist * cos_abs_hp_array[d_h] + pos[0]
@@ -228,10 +236,18 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
 
             v_s = max(0, int((vision_screen_half_size_v - top_v) / pixel_size))
             v_e = min(resolution_v, int((vision_screen_half_size_v + bot_v) / pixel_size))
+            alpha = min(1.0, max(2.0 * hit_dist / max_vision - 1.0, 0.0))
             for d_v in range(v_s, v_e):
-                if(transparent_array[d_h, d_v] < 1):
-                    rgb_array[d_h, d_v] = (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * landmarks_rgb[trans_ID]
+                rgb_array[d_h, d_v] = (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * ((1.0 - alpha) * transparent_rgb[trans_ID] + alpha * FAR_RGB)
 
-    transparent_array =  numpy.expand_dims(transparent_array, axis=2)
         
     return rgb_array
+
+def paint_agent_arrow(scr, color, offset, pos, angle, l1, l2):
+    A_A = angle - (PI - A_ARR)
+    A_B = angle + (PI - A_ARR)
+    pos_S = (pos[0] + offset[0], pos[1] + offset[1])
+    pos_A = (pos[0] + l1 * numpy.cos(A_A) + offset[0], pos[1] + l1 * numpy.sin(A_A) + offset[1])
+    pos_B = (pos[0] + l1 * numpy.cos(A_B) + offset[0], pos[1] + l1 * numpy.sin(A_B) + offset[1])
+    pos_C = (pos[0] + l2 * numpy.cos(angle) + offset[0], pos[1] + l2 * numpy.sin(angle) + offset[1])
+    pygame.draw.polygon(scr, color, (pos_S, pos_A, pos_C, pos_B))
