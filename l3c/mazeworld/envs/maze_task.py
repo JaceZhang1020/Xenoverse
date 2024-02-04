@@ -52,7 +52,7 @@ class MazeTaskManager(object):
             landmarks_avg_reward=0.60,
             landmarks_number=5,
             commands_sequence=200,
-            crowd_ratio=0.40,
+            wall_density=0.40,
             verbose=False):
         # Initialize the maze ...
         assert n > 6, "Minimum required cells are 7"
@@ -60,7 +60,7 @@ class MazeTaskManager(object):
         assert landmarks_number > 1, "There must be at least 1 goal, thus landmarks_number must > 1"
         assert landmarks_number < 10, "landmarks_number = %d is too much, need to be < 10" % (landmarks_number)
         if(self.verbose):
-            print("Generating an random maze of size %dx%d, with allow loops=%s, crowd ratio=%f"%(n, n, allow_loops, crowd_ratio))
+            print("Generating an random maze of size %dx%d, with allow loops=%s, crowd ratio=%f"%(n, n, allow_loops, wall_density))
         cell_walls = numpy.ones(shape=(n, n), dtype="int32")
         cell_texts = numpy.random.randint(1, self.n_texts, size=(n, n))
 
@@ -85,7 +85,7 @@ class MazeTaskManager(object):
 
         #Prim the wall until all points are connected
         max_cell_walls = numpy.product(cell_walls[1:-1, 1:-1].shape)
-        while len(rev_path_dict) > 1 or (allow_loops and numpy.sum(cell_walls[1:-1, 1:-1]) > max_cell_walls * crowd_ratio):
+        while len(rev_path_dict) > 1 or (allow_loops and numpy.sum(cell_walls[1:-1, 1:-1]) > max_cell_walls * wall_density):
             wall_list = list(wall_dict.keys())
             random.shuffle(wall_list)
             for i, j in wall_list:

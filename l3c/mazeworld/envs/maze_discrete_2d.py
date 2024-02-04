@@ -12,9 +12,9 @@ from l3c.mazeworld.envs.maze_base import MazeBase
 from .ray_caster_utils import landmarks_rgb,landmarks_color
 
 class MazeCoreDiscrete2D(MazeBase):
-    def __init__(self, view_grid=1, task_type="SURVIVAL", max_steps=5000):
+    def __init__(self, visibility_2D=1, task_type="SURVIVAL", max_steps=5000):
         super(MazeCoreDiscrete2D, self).__init__(
-                view_grid=view_grid,
+                visibility_2D=visibility_2D,
                 task_type=task_type,
                 max_steps=max_steps
                 )
@@ -68,15 +68,15 @@ class MazeCoreDiscrete2D(MazeBase):
     def update_observation(self):
         #Add the ground first
         #Find Relative Cells
-        obs_raw = - numpy.ones(shape=(2 * self.view_grid + 1, 2 * self.view_grid + 1), dtype="float32")
-        x_s = self._agent_grid[0] - self.view_grid
-        x_e = self._agent_grid[0] + self.view_grid + 1
-        y_s = self._agent_grid[1] - self.view_grid
-        y_e = self._agent_grid[1] + self.view_grid + 1
+        obs_raw = - numpy.ones(shape=(2 * self.visibility_2D + 1, 2 * self.visibility_2D + 1), dtype="float32")
+        x_s = self._agent_grid[0] - self.visibility_2D
+        x_e = self._agent_grid[0] + self.visibility_2D + 1
+        y_s = self._agent_grid[1] - self.visibility_2D
+        y_e = self._agent_grid[1] + self.visibility_2D + 1
         i_s = 0
-        i_e = 2 * self.view_grid + 1
+        i_e = 2 * self.visibility_2D + 1
         j_s = 0
-        j_e = 2 * self.view_grid + 1
+        j_e = 2 * self.visibility_2D + 1
         if(x_s < 0):
             i_s = -x_s
             x_s = 0
@@ -93,7 +93,7 @@ class MazeCoreDiscrete2D(MazeBase):
         obs_raw[i_s:i_e, j_s:j_e] = - self._cell_walls[x_s:x_e, y_s:y_e]
         if(self.task_type == "SURVIVAL"):
             obs_raw[i_s:i_e, j_s:j_e] += self._cell_active_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
-            obs_raw[self.view_grid, self.view_grid] = self._life
+            obs_raw[self.visibility_2D, self.visibility_2D] = self._life
         elif(self.task_type == "NAVIGATION"):
             obs_raw[i_s:i_e, j_s:j_e] += self._cell_landmarks[x_s:x_e, y_s:y_e] + 1
 

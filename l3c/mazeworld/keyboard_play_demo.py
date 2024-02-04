@@ -6,13 +6,13 @@ import argparse
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Playing the maze world demo with your keyboard')
-    parser.add_argument('--type', type=str, choices=["Discrete2D", "Discrete3D", "Continuous3D"], default="Continuous3D")
+    parser.add_argument('--maze_type', type=str, choices=["Discrete2D", "Discrete3D", "Continuous3D"], default="Continuous3D")
     parser.add_argument('--scale', type=int, default=15)
-    parser.add_argument('--rule', type=str, choices=["SURVIVAL", "NAVIGATION"], default="NAVIGATION")
+    parser.add_argument('--task_type', type=str, choices=["SURVIVAL", "NAVIGATION"], default="NAVIGATION")
     parser.add_argument('--max_steps', type=int, default=1000000)
     parser.add_argument('--density', type=float, default=0.30, help="Density of the walls satisfying that all spaces are connected")
-    parser.add_argument('--obs_grids', type=int, default=1, help="Observation of neighborhood grids, only valid in 2D mode")
-    parser.add_argument('--vision_range', type=float, default=100, help="Only valid in 3D mode")
+    parser.add_argument('--visibility_2D', type=int, default=1, help="Grids vision range, only valid in 2D mode")
+    parser.add_argument('--visibility_3D', type=float, default=12, help="3D vision range, Only valid in 3D mode")
     parser.add_argument('--wall_height', type=float, default=3.2, help="Only valid in 3D mode")
     parser.add_argument('--cell_size', type=float, default=2.0, help="Only valid in 3D mode")
     parser.add_argument('--n_landmarks', type=int, default=5, help="Number of landmarks, valid for both SURVIVAL and NAVIGATION task")
@@ -22,17 +22,17 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    if(args.type == "Discrete2D"):
-        maze_env = gym.make("mazeworld-discrete-2D-v1", max_steps=args.max_steps, view_grid=args.obs_grids, task_type=args.rule)
-    elif(args.type == "Discrete3D"):
-        maze_env = gym.make("mazeworld-discrete-3D-v1", max_steps=args.max_steps, max_vision_range=args.vision_range, task_type=args.rule)
-    elif(args.type == "Continuous3D"):
-        maze_env = gym.make("mazeworld-continuous-3D-v1", max_steps=args.max_steps, max_vision_range=args.vision_range, task_type=args.rule)
+    if(args.maze_type == "Discrete2D"):
+        maze_env = gym.make("mazeworld-discrete-2D-v1", max_steps=args.max_steps, visibility_2D=args.visibility_2D, task_type=args.task_type)
+    elif(args.maze_type == "Discrete3D"):
+        maze_env = gym.make("mazeworld-discrete-3D-v1", max_steps=args.max_steps, visibility_3D=args.visibility_3D, task_type=args.task_type)
+    elif(args.maze_type == "Continuous3D"):
+        maze_env = gym.make("mazeworld-continuous-3D-v1", max_steps=args.max_steps, visibility_3D=args.visibility_3D, task_type=args.task_type)
     else:
-        raise Exception("No such maze world type %s"%args.type)
+        raise Exception("No such maze type %s"%args.maze_type)
 
     task = MazeTaskSampler(n=args.scale, allow_loops=True, 
-            crowd_ratio=args.density,
+            wall_density=args.density,
             cell_size=args.cell_size,
             wall_height=args.wall_height,
             landmarks_number=args.n_landmarks,

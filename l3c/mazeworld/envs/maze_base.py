@@ -73,7 +73,7 @@ class MazeBase(object):
             refresh the view in SURVIVAL mode
             No need to refresh for NAVIGATION mode
         """
-        if(self.task_type is not "SURVIVAL"):
+        if(self.task_type != "SURVIVAL"):
             return
         self._instant_rewards = numpy.zeros_like(self._cell_landmarks, dtype="float32")
         self._cell_active_landmarks = numpy.copy(self._cell_landmarks)

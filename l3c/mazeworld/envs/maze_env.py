@@ -19,7 +19,7 @@ class MazeWorldDiscrete3D(gym.Env):
             render_scale=480,
             resolution=(320, 320),
             max_steps=5000,
-            max_vision_range=12.0,
+            visibility_3D=12.0,
             task_type="NAVIGATION",
             ):
 
@@ -29,7 +29,7 @@ class MazeWorldDiscrete3D(gym.Env):
                 resolution_horizon = resolution[0],
                 resolution_vertical = resolution[1],
                 max_steps = max_steps,
-                max_vision_range=max_vision_range,
+                visibility_3D=visibility_3D,
                 task_type = task_type,
                 )
 
@@ -61,7 +61,6 @@ class MazeWorldDiscrete3D(gym.Env):
     def step(self, action=None):
         if(self.need_reset):
             raise Exception("Must \"reset\" before doing any actions")
-        reward = self.maze_core._step_reward
 
         if(action is None): # Only when there is no action input can we use keyboard control
             pygame.time.delay(100) # 10 FPS
@@ -83,7 +82,8 @@ class MazeWorldDiscrete3D(gym.Env):
     def render(self, mode="human"):
         if(mode != "human"):
             raise NotImplementedError("Only human mode is supported")
-        self.key_done, self.keyboard_press = self.maze_core.render_update()
+        if(self.enable_render):
+            self.key_done, self.keyboard_press = self.maze_core.render_update()
 
     def save_trajectory(self, file_name):
         self.maze_core.render_trajectory(file_name)
@@ -94,7 +94,7 @@ class MazeWorldContinuous3D(gym.Env):
             render_scale=480,
             resolution=(320, 320),
             max_steps = 5000,
-            max_vision_range=12.0,
+            visibility_3D=12.0,
             task_type = "NAVIGATION"
             ):
 
@@ -104,7 +104,7 @@ class MazeWorldContinuous3D(gym.Env):
                 resolution_horizon = resolution[0],
                 resolution_vertical = resolution[1],
                 max_steps = max_steps,
-                max_vision_range=max_vision_range,
+                visibility_3D=visibility_3D,
                 task_type = task_type
                 )
 
@@ -160,7 +160,8 @@ class MazeWorldContinuous3D(gym.Env):
     def render(self, mode="human"):
         if(mode != "human"):
             raise NotImplementedError("Only human mode is supported")
-        self.key_done, self.keyboard_press = self.maze_core.render_update()
+        if(self.enable_render):
+            self.key_done, self.keyboard_press = self.maze_core.render_update()
 
     def save_trajectory(self, file_name):
         self.maze_core.render_trajectory(file_name)
@@ -171,15 +172,16 @@ class MazeWorldDiscrete2D(gym.Env):
             render_scale=480,
             max_steps = 5000,
             task_type = "NAVIGATION",
-            view_grid = 3):
+            visibility_2D = 1):
         self.enable_render = enable_render
-        self.maze_core = MazeCoreDiscrete2D(view_grid=view_grid, max_steps=max_steps, task_type=task_type)
+        self.maze_core = MazeCoreDiscrete2D(visibility_2D=visibility_2D, max_steps=max_steps, task_type=task_type)
         self.render_viewsize = render_scale
 
         # Go EAST/WEST/SOUTH/NORTH
         self.action_space = spaces.Discrete(4)
         # observation is the x, y coordinate of the grid
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(3,3), dtype=numpy.int32)
+        n_w = 2 * visibility_2D + 1
+        self.observation_space = spaces.Box(low=-1, high=1, shape=(n_w, n_w), dtype=numpy.int32)
 
         self.need_reset = True
         self.need_set_task = True
@@ -223,7 +225,8 @@ class MazeWorldDiscrete2D(gym.Env):
     def render(self, mode="human"):
         if(mode != "human"):
             raise NotImplementedError("Only human mode is supported")
-        self.key_done, self.keyboard_press = self.maze_core.render_update()
+        if(self.enable_render):
+            self.key_done, self.keyboard_press = self.maze_core.render_update()
 
     def save_trajectory(self, file_name, additional=None):
         self.maze_core.render_trajectory(file_name, additional=additional)

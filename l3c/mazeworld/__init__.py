@@ -15,40 +15,42 @@
 from gym.envs.registration import register
 from l3c.mazeworld.envs import MazeWorldContinuous3D
 from l3c.mazeworld.envs import MazeWorldDiscrete3D
-from l3c.mazeworld.envs import MazeWorld2D
+from l3c.mazeworld.envs import MazeWorldDiscrete2D
 from l3c.mazeworld.envs import MazeTaskSampler
 
 register(
-    id='mazeworld-continuous-3D-v0',
+    id='mazeworld-continuous-3D-v1',
     entry_point='l3c.mazeworld:MazeWorldContinuous3D',
     kwargs={
         "enable_render": True,
         "render_scale": 480,
         "resolution": (256, 256),
         "max_steps": 5000,
+        "visibility_3D": 12.0,
         "task_type": "NAVIGATION"
     }
 )
 
 register(
-    id='mazeworld-discrete-3D-v0',
+    id='mazeworld-discrete-3D-v1',
     entry_point='l3c.mazeworld:MazeWorldDiscrete3D',
     kwargs={
         "enable_render": True,
         "render_scale": 480,
         "resolution": (256, 256),
-        "max_steps": 200,
+        "max_steps": 2000,
+        "visibility_3D": 12.0,
         "task_type": "NAVIGATION"
     }
 )
 
 register(
-    id='mazeworld-2D-v0',
-    entry_point='l3c.mazeworld:MazeWorld2D',
+    id='mazeworld-discrete-2D-v1',
+    entry_point='l3c.mazeworld:MazeWorldDiscrete2D',
     kwargs={
         "enable_render": True,
-        "max_steps": 200,
-        "view_grid": 1,
-        "task_type": "SURVIVAL"
+        "max_steps": 2000,
+        "visibility_2D": 1,
+        "task_type": "NAVIGATION"
     }
 )

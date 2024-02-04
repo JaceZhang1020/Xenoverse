@@ -19,7 +19,7 @@ class MazeCoreDiscrete3D(MazeBase):
     #Read Configurations
     def __init__(
             self,
-            max_vision_range=12.0, #agent vision range
+            visibility_3D=12.0, #agent vision range
             fol_angle = 0.6 * PI, #Field of View
             resolution_horizon = 320, #resolution in horizontal
             resolution_vertical = 320, #resolution in vertical
@@ -27,7 +27,7 @@ class MazeCoreDiscrete3D(MazeBase):
             task_type = "SURVIVAL"
         ):
         super(MazeCoreDiscrete3D, self).__init__(
-                max_vision_range = max_vision_range,
+                visibility_3D = visibility_3D,
                 fol_angle = fol_angle,
                 resolution_horizon = resolution_horizon,
                 resolution_vertical = resolution_vertical,
@@ -120,7 +120,7 @@ class MazeCoreDiscrete3D(MazeBase):
         if(self.task_type == "SURVIVAL"):
             self._observation = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
                     self._cell_walls, self._cell_active_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
-                    MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.max_vision_range, 0.20, 
+                    MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
                     self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
             lifebar_l = self._life / self._max_life * self._lifebar_l
             start_x = int(self._lifebar_start_x)
@@ -133,7 +133,7 @@ class MazeCoreDiscrete3D(MazeBase):
         elif(self.task_type == "NAVIGATION"):
             self._observation = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
                     self._cell_walls, self._cell_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
-                    MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.max_vision_range, 0.20, 
+                    MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
                     self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
             start_x = int(self._navbar_start_x)
             start_y = int(self._navbar_start_y)

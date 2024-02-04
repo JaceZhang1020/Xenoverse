@@ -40,7 +40,7 @@ landmarks_color = lrgb_handler.color
 landmarks_rgb_arr = lrgb_handler.rgb_npa
 
 @njit(cache=True)
-def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell_transparent, max_vision):
+def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell_transparent, visibility_3D):
     eps = 1.0e-8
     if(cos_ori < 0):
         c_sign = -1
@@ -69,7 +69,7 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
         elif(side_dist_x > side_dist_y):
             hit_transparent_list.append((side_dist_y, hit_i, hit_j, 1, cell_transparent[hit_i, hit_j]))
 
-    while hit_dist < max_vision:
+    while hit_dist < visibility_3D:
         if(side_dist_x < side_dist_y):
             hit_i += delta_i
             side_dist_y -= side_dist_x
@@ -109,7 +109,7 @@ cell transparent: N X N array, where -1 represents empty, and 0~9 (max = 9 repre
 """
 @njit(cache=True)
 def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts, cell_size, texture_array,
-        ceil_text, ceil_height, text_size, max_vision, l_focal, vision_angle_h, resolution_h, resolution_v, transparent_rgb):
+        ceil_text, ceil_height, text_size, visibility_3D, l_focal, vision_angle_h, resolution_h, resolution_v, transparent_rgb):
     vision_screen_half_size_h = numpy.tan(vision_angle_h / 2) * l_focal
     vision_screen_half_size_v = vision_screen_half_size_h * resolution_v / resolution_h
     pixel_size = 2.0 * vision_screen_half_size_h / resolution_h
@@ -141,12 +141,12 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
         v_screen = (d_v + 0.5) * pixel_size - vision_screen_half_size_v
         distance = vision_height / v_screen * l_focal
         light_incident = v_screen / l_focal
-        if(distance > max_vision):
+        if(distance > visibility_3D):
             continue
 
         for d_h in range(resolution_h):
             eff_distance = distance / cos_hp_array[d_h]
-            alpha = min(1.0, max(2.0 * eff_distance / max_vision - 1.0, 0.0)) * light_incident
+            alpha = min(1.0, max(2.0 * eff_distance / visibility_3D - 1.0, 0.0)) * light_incident
             hit_x = eff_distance * cos_abs_hp_array[d_h] + pos[0]
             hit_y = eff_distance * sin_abs_hp_array[d_h] + pos[1]
             i = (hit_x / cell_size)
@@ -170,12 +170,12 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
         v_screen = vision_screen_half_size_v - (d_v + 0.5) * pixel_size
         distance = (ceil_height - vision_height) / v_screen * l_focal
         light_incident = v_screen / l_focal
-        if(distance > max_vision):
+        if(distance > visibility_3D):
             continue
 
         for d_h in range(resolution_h):
             eff_distance = distance / cos_hp_array[d_h]
-            alpha = min(1.0, max(2.0 * eff_distance / max_vision - 1.0, 0.0))
+            alpha = min(1.0, max(2.0 * eff_distance / visibility_3D - 1.0, 0.0))
             hit_x = eff_distance * cos_abs_hp_array[d_h] + pos[0]
             hit_y = eff_distance * sin_abs_hp_array[d_h] + pos[1]
             t_i = int(hit_x / cell_size)
@@ -194,10 +194,10 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
         j = int(pos[1] / cell_size)
         hit_dist, hit_i, hit_j, hit_side, hit_transparent = DDA_2D(
                 pos, i, j, max_cell_i, cell_size, cos_abs_hp_array[d_h], sin_abs_hp_array[d_h], 
-                cell_walls, cell_transparent, max_vision)
+                cell_walls, cell_transparent, visibility_3D)
         hit_transparent.sort(lambda x:x[0], reverse=True)
 
-        alpha = min(1.0, max(2.0 * hit_dist / max_vision - 1.0, 0.0))
+        alpha = min(1.0, max(2.0 * hit_dist / visibility_3D - 1.0, 0.0))
         text_id = cell_texts[hit_i,hit_j]
         hit_pt_x = hit_dist * cos_abs_hp_array[d_h] + pos[0]
         hit_pt_y = hit_dist * sin_abs_hp_array[d_h] + pos[1]
@@ -236,7 +236,7 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
 
             v_s = max(0, int((vision_screen_half_size_v - top_v) / pixel_size))
             v_e = min(resolution_v, int((vision_screen_half_size_v + bot_v) / pixel_size))
-            alpha = min(1.0, max(2.0 * hit_dist / max_vision - 1.0, 0.0))
+            alpha = min(1.0, max(2.0 * hit_dist / visibility_3D - 1.0, 0.0))
             for d_v in range(v_s, v_e):
                 rgb_array[d_h, d_v] = (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * ((1.0 - alpha) * transparent_rgb[trans_ID] + alpha * FAR_RGB)
 
