@@ -15,6 +15,7 @@ if __name__=='__main__':
     parser.add_argument('--visibility_3D', type=float, default=12, help="3D vision range, Only valid in 3D mode")
     parser.add_argument('--wall_height', type=float, default=3.2, help="Only valid in 3D mode")
     parser.add_argument('--cell_size', type=float, default=2.0, help="Only valid in 3D mode")
+    parser.add_argument('--step_reward', type=float, default=-0.01, help="Default rewards per-step")
     parser.add_argument('--n_landmarks', type=int, default=5, help="Number of landmarks, valid for both SURVIVAL and NAVIGATION task")
     parser.add_argument('--r_landmarks', type=float, default=0.50, help="Average rewards of the landmarks, only valid in SURVIVAL task")
     parser.add_argument('--save_replay', type=str, default=None, help="Save the replay trajectory in file")
@@ -35,6 +36,7 @@ if __name__=='__main__':
             wall_density=args.density,
             cell_size=args.cell_size,
             wall_height=args.wall_height,
+            step_reward=args.step_reward,
             landmarks_number=args.n_landmarks,
             landmarks_avg_reward=args.r_landmarks,
             verbose=True)
