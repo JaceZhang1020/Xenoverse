@@ -87,13 +87,13 @@ class MazeCoreContinuous3D(MazeBase):
             turn_rate = 0.0
             walk_speed = 0.0
             if keys[pygame.K_LEFT]:
-                turn_rate -=  0.2
+                turn_rate -= 0.3
             if keys[pygame.K_RIGHT]:
-                turn_rate += 0.2
+                turn_rate += 0.3
             if keys[pygame.K_UP]:
-                walk_speed += 0.5
+                walk_speed += 1.0
             if keys[pygame.K_DOWN]:
-                walk_speed -= 0.5
+                walk_speed -= 1.0
         if keys[pygame.K_SPACE]:
             turn_rate = 0.0
             walk_speed = 0.0

@@ -11,7 +11,7 @@ from l3c.mazeworld.envs.maze_discrete_2d import MazeCoreDiscrete2D
 from l3c.mazeworld.envs.maze_continuous_3d import MazeCoreContinuous3D
 from l3c.mazeworld.envs.maze_discrete_3d import MazeCoreDiscrete3D
 
-DISCRETE_ACTIONS=[(-1, 0), (1, 0), (0, -1), (0, 1)]
+DISCRETE_ACTIONS=[(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]
 
 class MazeWorldDiscrete3D(gym.Env):
     def __init__(self, 
@@ -34,10 +34,10 @@ class MazeWorldDiscrete3D(gym.Env):
                 )
 
         # Turning Left/Right and go backward / forward
-        self.action_space = spaces.Discrete(4)
+        self.action_space = spaces.Discrete(5)
         # observation is the x, y coordinate of the grid
         self.observation_space = spaces.Box(low=numpy.zeros(shape=(resolution[0], resolution[1], 3), dtype=numpy.float32), 
-                high=numpy.full((resolution[0], resolution[1], 3), 256, dtype=numpy.float32),
+                high=numpy.full((resolution[0], resolution[1], 3), 255, dtype=numpy.float32),
                 dtype=numpy.float32)
 
         self.need_reset = True
@@ -181,7 +181,9 @@ class MazeWorldDiscrete2D(gym.Env):
         self.action_space = spaces.Discrete(4)
         # observation is the x, y coordinate of the grid
         n_w = 2 * visibility_2D + 1
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(n_w, n_w), dtype=numpy.int32)
+        self.observation_space = spaces.Box(low=numpy.zeros(shape=(n_w, n_w, 3), dtype=numpy.float32), 
+                high=numpy.full((n_w, n_w, 3), 255, dtype=numpy.float32),
+                dtype=numpy.float32)
 
         self.need_reset = True
         self.need_set_task = True

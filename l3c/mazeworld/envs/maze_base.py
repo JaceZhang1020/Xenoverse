@@ -223,18 +223,20 @@ class MazeBase(object):
         traj_screen.fill(pygame.Color("white"))
         traj_screen.blit(self._surf_god, (0, 0))
 
-        pygame.draw.rect(traj_screen, pygame.Color("red"), 
-                (self._agent_grid[0] * self._render_cell_size, self._agent_grid[1] * self._render_cell_size,
-                self._render_cell_size, self._render_cell_size), width=0)
+        #pygame.draw.rect(traj_screen, pygame.Color("red"), 
+        #        (self._agent_grid[0] * self._render_cell_size, self._agent_grid[1] * self._render_cell_size,
+        #        self._render_cell_size, self._render_cell_size), width=0)
         if(self.task_type == "SURVIVAL"):
             self.render_dynamic_map(traj_screen, (0, 0))
 
         for i in range(len(self._agent_trajectory)-1):
+            factor = i / len(self._agent_trajectory)
+            noise = (factor - 0.5) * 0.10
             p = self._agent_trajectory[i]
             n = self._agent_trajectory[i+1]
-            p = [(p[0] + 0.5) * self._render_cell_size, (p[1] + 0.5) *  self._render_cell_size]
-            n = [(n[0] + 0.5) * self._render_cell_size, (n[1] + 0.5) *  self._render_cell_size]
-            pygame.draw.line(traj_screen, pygame.Color("red"), p, n, width=3)
+            p = [(p[0] + 0.5 + noise) * self._render_cell_size, (p[1] + 0.5 + noise) *  self._render_cell_size]
+            n = [(n[0] + 0.5 + noise) * self._render_cell_size, (n[1] + 0.5 + noise) *  self._render_cell_size]
+            pygame.draw.line(traj_screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 0, 255), p, n, width=2)
 
         # paint some additional surfaces where necessary
         if(additional != None):
