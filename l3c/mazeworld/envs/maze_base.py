@@ -163,8 +163,8 @@ class MazeBase(object):
 
         self._obs_logo = self._font.render("Observation", 0, pygame.Color("red"))
 
-        self._screen = pygame.Surface((2 * view_size, view_size))
-        self._screen = pygame.display.set_mode((2 * view_size, view_size))
+        self._screen = pygame.Surface((3 * view_size, view_size))
+        self._screen = pygame.display.set_mode((3 * view_size, view_size))
         pygame.display.set_caption("RandomMazeRender - GodView")
         self._surf_god = pygame.Surface((view_size, view_size))
         self._surf_god.fill(pygame.Color("white"))
@@ -175,10 +175,12 @@ class MazeBase(object):
             if(self._cell_walls[x,y] > 0):
                 pygame.draw.rect(self._surf_god, pygame.Color("black"), (x * self._render_cell_size, y * self._render_cell_size,
                         self._render_cell_size, self._render_cell_size), width=0)
-        logo_god = self._font.render("GodView", 0, pygame.Color("red"))
+        logo_god = self._font.render("God View - Invisible To Agent", 0, pygame.Color("red"))
         self._surf_god.blit(logo_god,(view_size - 90, 5))
+        logo_loc = self._font.render("Local Map - Invisible To Agent", 0, pygame.Color("red"))
+        self._surf_god.blit(logo_loc,(2 * view_size - 90, 5))
 
-    def render_dynamic_map(self, scr, offset):
+    def render_godview_dyna(self, scr, offset):
         """
         Cover landmarks with white in case it is not refreshed
         """
@@ -191,6 +193,15 @@ class MazeBase(object):
             txt_life = self._font.render("Life: %f"%self._life, 0, pygame.Color("green"))
             scr.blit(txt_life,(offset[0] + 90, offset[1] + 10))
 
+    def render_localmap(self, scr, offset):
+        """
+        Cover landmarks with white in case it is not refreshed
+        """
+        empty_range = 90
+        lm_surf = pygame.surfarray.make_surface(self.get_loc_map(3))
+        lm_surf = pygame.transform.scale(lm_surf, (self._view_size - 2 * empty_range, self._view_size - 2 * empty_range))
+        scr.blit(lm_surf, (offset[0] + empty_range, offset[1] + empty_range))
+
     def render_observation(self):
         """
         Need to implement the logic for observation painting
@@ -200,7 +211,8 @@ class MazeBase(object):
     def render_update(self):
         #Paint God View
         self._screen.blit(self._surf_god, (self._view_size, 0))
-        self.render_dynamic_map(self._screen, (self._view_size, 0))
+        self.render_godview_dyna(self._screen, (self._view_size, 0))
+        self.render_localmap(self._screen, (2 * self._view_size, 0))
 
         #Paint Agent and Observation
         self.render_observation()
@@ -228,7 +240,7 @@ class MazeBase(object):
         #        (self._agent_grid[0] * self._render_cell_size, self._agent_grid[1] * self._render_cell_size,
         #        self._render_cell_size, self._render_cell_size), width=0)
         if(self.task_type == "SURVIVAL"):
-            self.render_dynamic_map(traj_screen, (0, 0))
+            self.render_godview_dyna(traj_screen, (0, 0))
 
         for i in range(len(self._agent_trajectory)-1):
             factor = i / len(self._agent_trajectory)
