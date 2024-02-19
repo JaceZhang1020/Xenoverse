@@ -9,7 +9,8 @@ import time
 from pygame import font
 from numpy import random as npyrnd
 from numpy.linalg import norm
-from l3c.mazeworld.envs.ray_caster_utils import landmarks_color
+from l3c.mazeworld.envs.ray_caster_utils import landmarks_rgb, landmarks_color
+from l3c.mazeworld.envs.dynamics import PI
 
 class MazeBase(object):
     def __init__(self, **kw_args):
@@ -273,3 +274,55 @@ class MazeBase(object):
 
     def get_observation(self):
         return numpy.copy(self._observation)
+
+    def get_loc_map(self, map_range):
+        #Add the ground first
+        #Find Relative Cells
+        x_s = self._agent_grid[0] - map_range
+        x_e = self._agent_grid[0] + map_range + 1
+        y_s = self._agent_grid[1] - map_range
+        y_e = self._agent_grid[1] + map_range + 1
+        size = 2 * map_range + 1
+        i_s = 0
+        i_e = size
+        j_s = 0
+        j_e = size
+        if(x_s < 0):
+            i_s = -x_s
+            x_s = 0
+        if(x_e > self._n):
+            i_e -= x_e - self._n
+            x_e = self._n
+        if(y_s < 0):
+            j_s = -y_s
+            y_s = 0
+        if(y_e > self._n):
+            j_e -= y_e - self._n
+            y_e = self._n
+
+        # local map: 
+        #    ## =-1 for walls
+        #    ## >0 for landmarks
+        #    ## =0 for empty grounds
+        loc_map = - numpy.ones(shape=(2 * map_range + 1, 2 * map_range + 1), dtype="float32")
+        loc_map[i_s:i_e, j_s:j_e] = -self._cell_walls[x_s:x_e, y_s:y_e]
+        if(self.task_type == "SURVIVAL"):
+            loc_map[i_s:i_e, j_s:j_e] += self._cell_active_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
+        else:
+            loc_map[i_s:i_e, j_s:j_e] += self._cell_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
+
+        loc_map = numpy.expand_dims(loc_map, axis=-1)
+        wall_rgb = numpy.array([0, 0, 0], dtype="int32")
+        empty_rgb = numpy.array([255, 255, 255], dtype="int32")
+
+        color_map = ((loc_map == -1).astype("int32") * wall_rgb + 
+                (loc_map == 0).astype("int32") * empty_rgb)
+        for i in landmarks_rgb:
+            color_map += (loc_map == (i + 1)).astype("int32") * landmarks_rgb[i].astype("int32")
+
+        if("_agent_ori" in self.__dict__):
+            ori = int(2.0 * self._agent_ori / PI + 0.5) % 4 # 0, 1, 2, 3
+        else:
+            ori = 0
+
+        return numpy.rot90(color_map, k=ori, axes=(1,0)) # Need to rotate color map according to the orientation
