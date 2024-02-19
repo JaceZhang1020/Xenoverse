@@ -165,9 +165,11 @@ class MazeBase(object):
 
         self._screen = pygame.Surface((3 * view_size, view_size))
         self._screen = pygame.display.set_mode((3 * view_size, view_size))
-        pygame.display.set_caption("RandomMazeRender - GodView")
+        pygame.display.set_caption("MazeWorldRender")
         self._surf_god = pygame.Surface((view_size, view_size))
         self._surf_god.fill(pygame.Color("white"))
+        self._surf_lm = pygame.Surface((view_size, view_size))
+        self._surf_lm.fill(pygame.Color("grey"))
         it = numpy.nditer(self._cell_walls, flags=["multi_index"])
         for _ in it:
             x,y = it.multi_index
@@ -176,9 +178,9 @@ class MazeBase(object):
                 pygame.draw.rect(self._surf_god, pygame.Color("black"), (x * self._render_cell_size, y * self._render_cell_size,
                         self._render_cell_size, self._render_cell_size), width=0)
         logo_god = self._font.render("God View - Invisible To Agent", 0, pygame.Color("red"))
-        self._surf_god.blit(logo_god,(view_size - 90, 5))
+        self._surf_god.blit(logo_god,(90, 5))
         logo_loc = self._font.render("Local Map - Invisible To Agent", 0, pygame.Color("red"))
-        self._surf_god.blit(logo_loc,(2 * view_size - 90, 5))
+        self._surf_lm.blit(logo_loc,(90, 5))
 
     def render_godview_dyna(self, scr, offset):
         """
@@ -211,6 +213,7 @@ class MazeBase(object):
     def render_update(self):
         #Paint God View
         self._screen.blit(self._surf_god, (self._view_size, 0))
+        self._screen.blit(self._surf_lm, (2 * self._view_size, 0))
         self.render_godview_dyna(self._screen, (self._view_size, 0))
         self.render_localmap(self._screen, (2 * self._view_size, 0))
 
