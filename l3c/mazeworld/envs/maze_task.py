@@ -176,8 +176,8 @@ class MazeTaskManager(object):
             print("\n\n---------Successfully generate maze task with the following attributes-----------\n")
             print("Maze size %s x %s" %(n, n)) 
             print("Initialze born location: %s,%s" % start)
-            integrate_maze = cell_landmarks - cell_walls
-            print("Maze configuration (-2: walls, -1 empty, >0 landmarks and ID): \n%s" % integrate_maze)
+            integrate_maze = cell_landmarks + 1 - cell_walls
+            print("Maze configuration (-1: walls, 0 empty, >1 landmarks and ID): \n%s" % integrate_maze)
             print("Commands sequence: \n%s" % commands_sequence)
             print("Landmarks Rewards: \n%s" % landmarks_rewards)
             print("Landmarks Refresh Interval: \n%s" % landmarks_refresh_interval)
