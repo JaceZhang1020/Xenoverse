@@ -4,11 +4,11 @@ MazeWorld is a powerful and efficient simulator for navigating a randomly genera
 
 ## Check some of the demonstrations here:
 
-<img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-1-demo.gif" width="600"/>
+<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-1-demo.gif" width="600"/>
 
-<img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-2-demo.gif" width="600"/>
+<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-2-demo.gif" width="600"/>
 
-<img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/SURVIVAL-1-demo.gif" width="600"/>
+<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/SURVIVAL-1-demo.gif" width="600"/>
 
 
 # Quick Start
