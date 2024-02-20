@@ -1,100 +1,76 @@
 # Introduction
 
-MazeWorld is a powerful and efficient simulator for navigation in a randomly generated maze. You may use MazeWorld to generate nearly unlimited configuration of mazes, and nearly unlimited different tasks. We use MazeWorld to facilitate researches in Meta-Reinforcement-Learning.
+MazeWorld is a powerful and efficient simulator for navigating a randomly generated maze. You may use MazeWorld to generate unlimited type of mazes and tasks. We aim to facilitate researches in Meta-Reinforcement-Learning and Artificial General Intelligence.
 
-There are 3 types of mazes:
-
-- **mazeworld-2D-v0** <br>
---- Observation space: its surrounding $(2n+1)\times(2n+1)$ (n specified by view_grid parameter) grids<br>
---- Action space: 4-D discrete N/S/W/E <br><br>
-- **mazeworld-discrete-3D-v0** <br>
---- Observation space: RGB image of 3D first-person view. <br>
---- Action space: 4-D discrete TurnLeft/TurnRight/GoForward/GoBackward. <br><br>
-- **mazeworld-continuous-3D-v0** <br>
---- Observation space: RGB image of 3D first-person view.<br>
---- Action space: 2-D continuous [Turn, Forward/Backward]<br><br>
-
-Each type of mazes support 2 modes:
-
-- **ESCAPE** mode <br>
---- Reach an unknown goal as soon as possible <br>
---- The goal is specified by task configuration <br>
---- Each step the agent receives reward of step_reward <br>
---- Acquire goal_reward when reaching the goal <br>
---- Episode terminates when reaching the goal <br><br>
-- **SURVIVAL** mode <br>
---- The agent begins with initial_life specified by the task <br>
---- Food is generated at fixed grids specified by the task <br>
---- When agent reaches the food spot, its life is extended depending on the food <br>
---- When food is cosumed, it will be refreshed following a fixed periodicity <br>
---- The life slowly decreases with time, depeding on step_reward <br>
---- Episode terminates when life goes below 0 <br>
---- The total reward is the food being consumed <br>
---- The agent's current life is shown by a red bar at the top of its view in 3D mazes <br>
---- The agent's current life is shown in the center of the $(2n+1)\times(2n+1)$ in 2D mazes <br><br>
-
-Demonstrations of 2D maze
-
-<img src="https://github.com/benchmarking-rl/PARL-experiments/blob/master/MetaGym/demo_maze_2d.gif" width="600"/>
-
-Demonstrations of 3D mazes
-
-<img src="https://github.com/benchmarking-rl/PARL-experiments/blob/master/MetaGym/demo_maze_small.gif" width="600"/>
-
-<img src="https://github.com/benchmarking-rl/PARL-experiments/blob/master/MetaGym/demo_maze_huge.gif" width="600"/>
-
-# Install
-
-```bash
-pip install l3c[mazeworld]
-```
-
-#### For local installation, execute the following commands:
-
-```bash
-git clone https://github.com/FutureAGI/L3C
-cd l3c
-pip install .[mazeworld]
-```
+## Check some of the demonstrations here:
+![NAVIGATION Mode Demonstration](envs/img/NAVIGATION-1-demo.gif)
+![NAVIGATION Mode Demonstration](envs/img/NAVIGATION-2-demo.gif)
+![SURVIVAL Mode Demonstration](envs/img/SURVIVAL-1-demo.gif)
 
 # Quick Start
 
-## Import
+## Keyboard Demonstrations
 
-Import and create the meta maze environment with 
+You may try MazeWorld with the following commands:
+```bash
+python -m l3c.mazeworld.keyboard_play_demo 
+```
+The above commands can be followed by the following optional arguments
+
+```bash
+  --maze_type {Discrete2D,Discrete3D,Continuous3D}
+  --scale SCALE
+  --task_type {SURVIVAL,NAVIGATION}
+  --max_steps MAX_STEPS
+  --density DENSITY     Density of the walls satisfying that all spaces are connected
+  --visibility_2D VISIBILITY_2D     Grids vision range, only valid in 2D mode
+  --visibility_3D VISIBILITY_3D     3D vision range, Only valid in 3D mode
+  --wall_height WALL_HEIGHT     Only valid in 3D mode
+  --cell_size CELL_SIZE     Only valid in 3D mode
+  --step_reward STEP_REWARD     Default rewards per-step
+  --n_landmarks N_LANDMARKS     Number of landmarks, valid for both SURVIVAL and NAVIGATION task
+  --r_landmarks R_LANDMARKS     Average rewards of the landmarks, only valid in SURVIVAL task
+  --save_replay SAVE_REPLAY     Save the replay trajectory in file
+  --verbose VERBOSE
+```
+
+## APIs
+
+Here is an example of creating and running MazeWorld environments
+
+### Creating Maze Environments
 ```python
 import gym
 import l3c.mazeworld
 from l3c.mazeworld import MazeTaskSampler
 
-maze_env = gym.make("mazeworld-continuous-3D-v0", enable_render=True, task_type="SURVIVAL") # Running a continuous 3D Maze with SURVIVAL task
-maze_env = gym.make("mazeworld-discrete-3D-v0", enable_render=True, task_type="ESCAPE") # Running a discrete 3D Maze with ESCAPE task
-maze_env = gym.make("mazeworld-2D-v0", enable_render=True, task_type="ESCAPE") # Running a 2D Maze with ESCAPE task
+maze_env = gym.make("mazeworld-discrete-2D-v0", enable_render=True, task_type="NAVIGATION") # Creating discrete 2D Maze environments with NAVIGATION task
+maze_env = gym.make("mazeworld-discrete-3D-v1", enable_render=True, task_type="NAVIGATION") # Creating discrete 3D Maze environments with NAVIGATION task
+maze_env = gym.make("mazeworld-continuous-3D-v1", enable_render=True, task_type="SURVIVAL") # Creating continuous 3D Maze environments with SURVIVAL task
 ```
 
-## Maze Generation
-
-Use the following code to generate a random maze
+### Creating Maze Configurations
 ```python
 #Sample a task by specifying the configurations
 task = MazeTaskSampler(
-    n            = 15,  # Number of cells = n*n
-    allow_loops  = False,  # Whether loops are allowed
-    crowd_ratio  = 0.40,   # Specifying how crowded is the wall in the region, only valid when loops are allowed. E.g. crowd_ratio=0 means no wall in the maze (except the boundary)
+    n            = 15,  # Scale of the maze .
+    allow_loops  = False,  # If false, there will be no loops in the maze.
     cell_size    = 2.0, # specifying the size of each cell, only valid for 3D mazes
     wall_height  = 3.2, # specifying the height of the wall, only valid for 3D mazes
     agent_height = 1.6, # specifying the height of the agent, only valid for 3D mazes
-    view_grid    = 1, # specifiying the observation region for the agent, only valid for 2D mazes
     step_reward  = -0.01, # specifying punishment in each step in ESCAPE mode, also the reduction of life in each step in SURVIVAL mode
     goal_reward  = 1.0, # specifying reward of reaching the goal, only valid in ESCAPE mode
     initial_life = 1.0, # specifying the initial life of the agent, only valid in SURVIVAL mode
     max_life     = 2.0, # specifying the maximum life of the agent, acquiring food beyond max_life will not lead to growth in life. Only valid in SURVIVAL mode
-    food_density = 0.01,# specifying the density of food spot in the maze, only valid in SURVIVAL mode
-    food_interval= 100, # specifying the food refreshing periodicity, only valid in SURVIVAL mode
+    landmarks_number = 5, # specifying the number of landmarks in the maze
+    landmarks_avg_reward = 0.60, # In SURVIVAL mode, the expected mean reward of each landmarks
+    landmarks_refresh_interval = 200, # In SURVIVAL mode, the landmarks refresh in that much steps
+    commands_sequence = 200, # In NAVIGATION mode, the tasks include navigating to that much targets
+    wall_density = 0.40, # Specifying the wall density in the region, only valid when loops are allowed. E.g. crowd_ratio=0 means no obstacles (except the boundary)
     )
 ```
 
-## Running Mazes
+### Running Maze Environment Step By Step
 ```python
 #Set the task configuration to the meta environment
 maze_env.set_task(task)
@@ -108,32 +84,55 @@ while not done:
     maze_env.render()
 ```
 
-# Keyboard Demonstrations
-
-## 2D Mazes Demonstration
-
-For a demonstration of keyboard controlled 2D mazes, run
-```bash
-python l3c/mazeworld/keyboard_play_demo_2d.py
-```
-
-## 3D Discrete Mazes Demonstration
-
-For a demonstration of keyboard controlled discrete 3D mazes, run
-```bash
-python l3c/mazeworld/keyboard_play_demo_discrete_3d.py
-```
-
-## 3D Continuous Mazes Demonstration
-
-For a demonstration of keyboard controlled 3D mazes, run
-```bash
-python l3c/mazeworld/keyboard_play_demo_continuous_3d.py
-```
 
 ## Writing your own policy
 
-Specifying action with your own (Meta RL) policy without relying on keyboards and rendering, check
+Specifying action with your own policy without relying on keyboards and rendering, check
 ```bash
-python l3c/mazeworld/test.py
+l3c/mazeworld/test.py
 ```
+
+# Installation
+
+#### Remote installation
+
+```bash
+pip install l3c[mazeworld]
+```
+
+#### Local installation
+
+```bash
+git clone https://github.com/FutureAGI/L3C
+cd l3c
+pip install .[mazeworld]
+```
+
+# Configure your own maze and task
+
+3 Types of Mazes
+
+- **mazeworld-discrete-2D-v1** <br>
+--- Observation space: its surrounding $(2n+1)\times(2n+1)$ (n specified by visibility_2D parameter) grids<br>
+--- Action space: 4-D discrete N/S/W/E <br><br>
+- **mazeworld-discrete-3D-v0** <br>
+--- Observation space: RGB image of 3D first-person view. <br>
+--- Action space: 4-D discrete TurnLeft/TurnRight/GoForward/GoBackward. <br><br>
+- **mazeworld-continuous-3D-v0** <br>
+--- Observation space: RGB image of 3D first-person view.<br>
+--- Action space: 2-D continuous [Left/Right, Forward/Backward]<br><br>
+
+2 Types of Tasks:
+
+- **NAVIGATION** mode <br>
+--- Reach an target position (goal) as soon as possible, the target is a specific landmark specified by the color bar in observations <br>
+--- Each step the agent receives reward of step_reward <br>
+--- Acquire goal_reward when reaching the specified target (goal) <br>
+--- Episode terminates when finishing all the specified target in commands_sequence <br><br>
+- **SURVIVAL** mode <br>
+--- The agent begins with initial_life specified by the task <br>
+--- Episode terminates when life goes below 0 <br>
+--- For each landmark, a unknown random reward is attached <br>
+--- When the agent reaches the landmark, it is consumed to recover its life (can be punishments). The landmarks will be refreshed after certain amount of time <br>
+--- The life slowly decreases with time, depeding on step_reward <br>
+--- The agent's life is shown by a color bar on the top (in 3D mazes) or the color on the center area (in 2D mazes) <br>
