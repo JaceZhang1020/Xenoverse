@@ -3,9 +3,13 @@
 MazeWorld is a powerful and efficient simulator for navigating a randomly generated maze. You may use MazeWorld to generate unlimited type of mazes and tasks. We aim to facilitate researches in Meta-Reinforcement-Learning and Artificial General Intelligence.
 
 ## Check some of the demonstrations here:
-![NAVIGATION Mode Demonstration](envs/img/NAVIGATION-1-demo.gif)
-![NAVIGATION Mode Demonstration](envs/img/NAVIGATION-2-demo.gif)
-![SURVIVAL Mode Demonstration](envs/img/SURVIVAL-1-demo.gif)
+
+<img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-1-demo.gif" width="600"/>
+
+<img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-2-demo.gif" width="600"/>
+
+<img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/SURVIVAL-1-demo.gif" width="600"/>
+
 
 # Quick Start
 
@@ -17,7 +21,7 @@ python -m l3c.mazeworld.keyboard_play_demo
 ```
 The above commands can be followed by the following optional arguments
 
-```bash
+```
   --maze_type {Discrete2D,Discrete3D,Continuous3D}
   --scale SCALE
   --task_type {SURVIVAL,NAVIGATION}
