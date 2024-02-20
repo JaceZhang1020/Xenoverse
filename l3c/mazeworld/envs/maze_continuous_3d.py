@@ -101,7 +101,7 @@ class MazeCoreContinuous3D(MazeBase):
 
     def update_observation(self):
         if(self.task_type == "SURVIVAL"):
-            self._observation = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
+            self._observation, cell_exposed = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
                     self._cell_walls, self._cell_active_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
                     MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
                     self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
@@ -114,7 +114,7 @@ class MazeCoreContinuous3D(MazeBase):
             self._observation[start_x:end_x, start_y:end_y, 1] = 0
             self._observation[start_x:end_x, start_y:end_y, 2] = 0
         elif(self.task_type == "NAVIGATION"):
-            self._observation = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
+            self._observation, cell_exposed = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
                     self._cell_walls, self._cell_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
                     MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
                     self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
@@ -124,6 +124,7 @@ class MazeCoreContinuous3D(MazeBase):
             end_y = int(self._navbar_start_y + self._navbar_w)
             self._observation[start_x:end_x, start_y:end_y] = landmarks_rgb[self._command]
         self._obs_surf = pygame.surfarray.make_surface(self._observation)
+        self._cell_exposed = numpy.logical_or(self._cell_exposed, cell_exposed)
 
     def get_observation(self):
         return numpy.copy(self._observation)

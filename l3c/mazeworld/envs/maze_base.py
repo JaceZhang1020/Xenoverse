@@ -91,6 +91,9 @@ class MazeBase(object):
         self._agent_loc = self.get_cell_center(self._start)
         self._agent_trajectory = [numpy.copy(self._agent_grid)]
 
+        # Record all observed cells
+        self._cell_exposed = numpy.zeros_like(self._cell_walls).astype(numpy.bool)
+
         # Maximum w and h in the space
         self._size = self._n * self._cell_size
 

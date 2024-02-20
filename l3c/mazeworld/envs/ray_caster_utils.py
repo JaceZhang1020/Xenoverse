@@ -69,6 +69,7 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
     hit_dist = 0.0
     hit_side = 0
     hit_transparent_list = []
+    exposed_cell = [[i,j]]
 
     #Remove this part as we don't want to see colors when in landmark cells themselves
     #if(cell_transparent[hit_i, hit_j] > -1):
@@ -89,6 +90,7 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
                     hit_dist = 1.0e+6
                     break
             else:
+                exposed_cell.append([hit_i, hit_j]) # The cell becomes seen to the agent
                 if(cell_walls[hit_i, hit_j] > 0):
                     hit_side = 0
                     break
@@ -104,11 +106,12 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
                     hit_dist = 1.0e+6
                     break
             else:
+                exposed_cell.append([hit_i, hit_j]) # The cell becomes seen to the agent
                 if(cell_walls[hit_i, hit_j] > 0):
                     hit_side = 1
                     break
             side_dist_y = delta_dist_y
-    return hit_dist, hit_i, hit_j, hit_side, hit_transparent_list
+    return hit_dist, hit_i, hit_j, hit_side, hit_transparent_list, exposed_cell
 
 
 """
@@ -127,6 +130,7 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
     max_cell_i = cell_walls.shape[0]
     max_cell_j = cell_walls.shape[1]
     pixel_factor = pixel_size / l_focal
+    cell_exposed = numpy.zeros_like(cell_walls)
 
     # prepare some maths
     rgb_array = numpy.zeros(shape=(resolution_h, resolution_v, 3), dtype="int32")
@@ -200,9 +204,11 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
     for d_h in range(resolution_h):
         i = int(pos[0] / cell_size)
         j = int(pos[1] / cell_size)
-        hit_dist, hit_i, hit_j, hit_side, hit_transparent = DDA_2D(
+        hit_dist, hit_i, hit_j, hit_side, hit_transparent, exposed_cell = DDA_2D(
                 pos, i, j, max_cell_i, cell_size, cos_abs_hp_array[d_h], sin_abs_hp_array[d_h], 
                 cell_walls, cell_transparent, visibility_3D)
+        for idx in exposed_cell:
+            cell_exposed[idx[0],idx[1]] = 1
         hit_transparent.sort(lambda x:x[0], reverse=True)
 
         alpha = min(1.0, max(2.0 * hit_dist / visibility_3D - 1.0, 0.0))
@@ -247,9 +253,8 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             alpha = min(1.0, max(2.0 * hit_dist / visibility_3D - 1.0, 0.0))
             for d_v in range(v_s, v_e):
                 rgb_array[d_h, d_v] = (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * ((1.0 - alpha) * transparent_rgb[trans_ID] + alpha * FAR_RGB)
-
         
-    return rgb_array
+    return rgb_array, cell_exposed
 
 def paint_agent_arrow(scr, color, offset, pos, angle, l1, l2):
     A_A = angle - (PI - A_ARR)
