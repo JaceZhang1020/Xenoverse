@@ -1,8 +1,8 @@
 import gym
 import sys
+import argparse
 import l3c.mazeworld
 from l3c.mazeworld import MazeTaskSampler
-import argparse
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Playing the maze world demo with your keyboard')
@@ -50,7 +50,6 @@ if __name__=='__main__':
         maze_env.render()
         state, reward, done, _ = maze_env.step(None)
         sum_reward += reward
-        loc_map = maze_env.maze_core.get_loc_map(3)
         if(args.verbose):
             print("Instant r = %.2f, Accumulate r = %.2f" % (reward, sum_reward))
         if(maze_env.key_done):

@@ -1,8 +1,10 @@
 import gym
 import sys
+import argparse
+import time
 import l3c.mazeworld
 from l3c.mazeworld import MazeTaskSampler
-import argparse
+from l3c.mazeworld.agents import SmartSLAMAgent
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Playing the maze world demo with your keyboard')
@@ -25,11 +27,11 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     if(args.maze_type == "Discrete2D"):
-        maze_env = gym.make("mazeworld-discrete-2D-v1", max_steps=args.max_steps, visibility_2D=args.visibility_2D, task_type=args.task_type)
+        maze_env = gym.make("mazeworld-discrete-2D-v1", enable_render=False, max_steps=args.max_steps, visibility_2D=args.visibility_2D, task_type=args.task_type)
     elif(args.maze_type == "Discrete3D"):
-        maze_env = gym.make("mazeworld-discrete-3D-v1", max_steps=args.max_steps, visibility_3D=args.visibility_3D, task_type=args.task_type)
+        maze_env = gym.make("mazeworld-discrete-3D-v1", enable_render=False, max_steps=args.max_steps, visibility_3D=args.visibility_3D, task_type=args.task_type)
     elif(args.maze_type == "Continuous3D"):
-        maze_env = gym.make("mazeworld-continuous-3D-v1", max_steps=args.max_steps, visibility_3D=args.visibility_3D, task_type=args.task_type)
+        maze_env = gym.make("mazeworld-continuous-3D-v1", enable_render=False, max_steps=args.max_steps, visibility_3D=args.visibility_3D, task_type=args.task_type)
     else:
         raise Exception("No such maze type %s"%args.maze_type)
 
@@ -39,7 +41,7 @@ if __name__=='__main__':
             wall_height=args.wall_height,
             step_reward=args.step_reward,
             landmarks_number=args.n_landmarks,
-            ladnmarks_refresh_interval=args.cd_landmarks,
+            landmarks_refresh_interval=args.cd_landmarks,
             landmarks_avg_reward=args.r_landmarks,
             verbose=True)
     maze_env.set_task(task)
@@ -52,7 +54,6 @@ if __name__=='__main__':
     reward = 0
 
     while not done:
-        maze_env.render()
         action = agent.step(observation, reward)
         observation, reward, done, _ = maze_env.step(action)
         sum_reward += reward

@@ -15,9 +15,9 @@ MazeWorld is a powerful and efficient simulator for navigating a randomly genera
 
 ## Keyboard Demonstrations
 
-You may try MazeWorld with the following commands:
+You may try MazeWorld with your own keyboard with the following commands:
 ```bash
-python -m l3c.mazeworld.keyboard_play_demo 
+python -m l3c.mazeworld.demo.keyboard_play_demo 
 ```
 The above commands can be followed by the following optional arguments
 
@@ -37,6 +37,15 @@ The above commands can be followed by the following optional arguments
   --save_replay SAVE_REPLAY     Save the replay trajectory in file
   --verbose VERBOSE
 ```
+
+## Smart Automatic Agent Demonstration
+
+We implement a smart agent that can do SLAM & Planning in MazeWorlds. You may check the demonstration with the following commands:
+```bash
+python -m l3c.mazeworld.demo.agent_play_demo 
+```
+
+<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/AGENT-1-demo.gif" width="600"/>
 
 ## APIs
 
@@ -93,8 +102,17 @@ while not done:
 
 Specifying action with your own policy without relying on keyboards and rendering, check
 ```bash
-l3c/mazeworld/test.py
+l3c/mazeworld/tests/test.py
 ```
+
+## Using the build-in agents
+
+We implement a smart agent with simulated localization and mapping capbability. The agent does not have all the ground truth information from the beginning, however, it has perfect memory and planning algorithm, and trade-off exploration & exploitation as well, (which can be regarded as the ideal policy). Below is an example to use the smart-agent API
+```python
+agent = SmartSLAMAgent(maze_env=maze_env, render=True)
+action = agent.step(observation, reward)
+```
+It's important to be aware that the "render=True" option cannot be utilized concurrently with "enable_render=True" when configuring the maze environment. This is because the visualization may experience interference under such circumstances.Developers can write their own agents following the guidance of agents/agent_base.py
 
 # Installation
 
@@ -112,7 +130,7 @@ cd l3c
 pip install .[mazeworld]
 ```
 
-# Configure your own maze and task
+# Explaining the maze type and task type
 
 3 Types of Mazes
 
