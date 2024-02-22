@@ -33,6 +33,7 @@ The above commands can be followed by the following optional arguments
   --step_reward STEP_REWARD     Default rewards per-step
   --n_landmarks N_LANDMARKS     Number of landmarks, valid for both SURVIVAL and NAVIGATION task
   --r_landmarks R_LANDMARKS     Average rewards of the landmarks, only valid in SURVIVAL task
+  --cd_landmarks CD_LANDMARKS   Refresh interval of landmarks
   --save_replay SAVE_REPLAY     Save the replay trajectory in file
   --verbose VERBOSE
 ```

@@ -60,12 +60,12 @@ class AgentBase(object):
     def policy(self, observation, r):
         raise NotImplementedError()
 
-    def render_update(self):
+    def render_update(self, observation):
         raise NotImplementedError()
 
     def step(self, observation, r):
         self.update_common_info()
         action = self.policy(observation, r)
         if(self.render):
-            self.render_update()
+            self.render_update(observation)
         return action

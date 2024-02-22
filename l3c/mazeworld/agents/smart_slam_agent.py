@@ -19,12 +19,13 @@ class SmartSLAMAgent(AgentBase):
         self._render_cell_size_x = view_size[0] / self._nx
         self._render_cell_size_y = view_size[1] / self._ny
         self._view_size = view_size
+        self._window_size = (view_size[0] * 2, view_size[1])
 
         self._pos_conversion_x = self._render_cell_size_x / self.maze_env.maze_core._cell_size
         self._pos_conversion_y = self._render_cell_size_y / self.maze_env.maze_core._cell_size
 
-        self._screen = pygame.Surface(view_size)
-        self._screen = pygame.display.set_mode(view_size)
+        self._screen = pygame.Surface(self._window_size)
+        self._screen = pygame.display.set_mode(self._window_size)
         pygame.display.set_caption("AgentRender")
         self._surf_god = pygame.Surface(view_size)
         self._surf_god.fill(pygame.Color("white"))
@@ -35,7 +36,7 @@ class SmartSLAMAgent(AgentBase):
                     pygame.draw.rect(self._surf_god, pygame.Color("black"), (x * self._render_cell_size_x, y * self._render_cell_size_y,
                             self._render_cell_size_x, self._render_cell_size_y), width=0)
 
-    def render_update(self):
+    def render_update(self, observation):
         # paint landmarks
         self._screen.blit(self._surf_god, (0, 0))
         for landmarks_id, (x,y) in enumerate(self._landmarks_coordinates):
@@ -69,6 +70,11 @@ class SmartSLAMAgent(AgentBase):
             n = [(n[0] + 0.5) * self._render_cell_size_x, (n[1] + 0.5) *  self._render_cell_size_y]
             pygame.draw.line(self._screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 128, 255), p, n, width=1)
 
+        # paint observation
+        obs_surf = pygame.surfarray.make_surface(observation)
+        obs_surf = pygame.transform.scale(obs_surf, self._view_size)
+        self._screen.blit(obs_surf, (self._view_size[0], 0))
+
         # display
         pygame.display.update()
         done = False
@@ -80,7 +86,7 @@ class SmartSLAMAgent(AgentBase):
     def update_cost_map(self, r_exp=0.25):
         # Calculate Shortest Distance using A*
         # In survival mode, consider the loss brought by rewards
-        self._cost_map = 10000 * numpy.ones_like(self._god_info)
+        self._cost_map = 1e+6 * numpy.ones_like(self._god_info)
         refresh_list = Queue()
         refresh_list.put((self._cur_grid[0], self._cur_grid[1]))
         self._cost_map[self._cur_grid[0], self._cur_grid[1]] = 0
@@ -121,7 +127,7 @@ class SmartSLAMAgent(AgentBase):
     def policy_survival(self, observation, r):
         path_greedy, cost = self.navigate_landmarks_survival(0.50)
         path = path_greedy
-        if(path is None or cost > 0):
+        if(path is None or cost > -0.01):
             path_exp = self.exploration()
             if(path_exp is not None):
                 path = path_exp
@@ -224,6 +230,8 @@ class SmartSLAMAgent(AgentBase):
                 n_y = sel_y + d_y
                 if(n_x < 0 or n_x > self._nx - 1 or n_y < 0 or n_y > self._ny - 1):
                     continue
+                if(cost_map[n_x, n_y] > 1e+4):
+                    continue
                 if(cost_map[n_x, n_y] < min_cost):
                     min_cost = cost_map[n_x, n_y]
                     sel_x = n_x
@@ -234,7 +242,7 @@ class SmartSLAMAgent(AgentBase):
 
     def exploration(self):
         utility = self._cost_map + 10000 * self._mask_info
-        if(numpy.argmax(utility) >= 10000):
+        if(numpy.argmin(utility) >= 10000):
             return None 
         target_idx = numpy.unravel_index(numpy.argmin(utility), utility.shape)
         return self.retrieve_path(self._cost_map, target_idx)
@@ -251,9 +259,9 @@ class SmartSLAMAgent(AgentBase):
     def navigate_landmarks_survival(self, r_exp):
         cost_map = numpy.copy(self._cost_map)
         for i,idx in enumerate(self._landmarks_coordinates):
-            if(i not in self._landmarks_visit):
+            if(i not in self._landmarks_visit and self._mask_info[idx] > 0):
                 cost_map[idx] += r_exp / self._step_reward
-            elif(self._landmarks_rewards[i] > 0.0):
+            elif(self._landmarks_rewards[i] > 0.0 and self._mask_info[idx] > 0):
                 cost_map[idx] += self._landmarks_cd[i] + self._landmarks_rewards[i] / self._step_reward
         target_idx = numpy.unravel_index(numpy.argmin(cost_map), cost_map.shape)
         return self.retrieve_path(self._cost_map, target_idx), cost_map[target_idx]

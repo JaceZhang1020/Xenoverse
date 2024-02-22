@@ -18,6 +18,7 @@ if __name__=='__main__':
     parser.add_argument('--step_reward', type=float, default=-0.01, help="Default rewards per-step")
     parser.add_argument('--n_landmarks', type=int, default=5, help="Number of landmarks, valid for both SURVIVAL and NAVIGATION task")
     parser.add_argument('--r_landmarks', type=float, default=0.50, help="Average rewards of the landmarks, only valid in SURVIVAL task")
+    parser.add_argument('--cd_landmarks', type=int, default=200, help="Refresh interval of landmarks")
     parser.add_argument('--save_replay', type=str, default=None, help="Save the replay trajectory in file")
     parser.add_argument('--verbose', type=bool, default=False)
 
@@ -39,6 +40,7 @@ if __name__=='__main__':
             step_reward=args.step_reward,
             landmarks_number=args.n_landmarks,
             landmarks_avg_reward=args.r_landmarks,
+            landmarks_refresh_interval=args.cd_landmarks,
             verbose=True)
     maze_env.set_task(task)
 
