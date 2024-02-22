@@ -4,12 +4,11 @@ MazeWorld is a powerful and efficient simulator for navigating a randomly genera
 
 ## Check some of the demonstrations here:
 
-<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-1-demo.gif" width="600"/>
+![Demonstration-Keyboard-Control-1](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-1-demo.gif)
 
-<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-2-demo.gif" width="600"/>
+![Demonstration-Keyboard-Control-2](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-2-demo.gif)
 
-<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/SURVIVAL-1-demo.gif" width="600"/>
-
+![Demonstration-Keyboard-Control-3](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/SURVIVAL-1-demo.gif)
 
 # Quick Start
 
@@ -44,8 +43,7 @@ We implement a smart agent that can do SLAM & Planning in MazeWorlds. You may ch
 ```bash
 python -m l3c.mazeworld.demo.agent_play_demo 
 ```
-
-<img src="http://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/AGENT-1-demo.gif" width="600"/>
+![Demonstration-Agent-Control](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/AGENT-1-demo.gif) 
 
 ## APIs
 
