@@ -22,7 +22,7 @@ class MazeWorldDiscrete3D(gym.Env):
             visibility_3D=12.0,
             task_type="NAVIGATION",
             ):
-
+        self.maze_type = "Discrete3D"
         self.enable_render = enable_render
         self.render_viewsize = render_scale
         self.maze_core = MazeCoreDiscrete3D(
@@ -97,7 +97,7 @@ class MazeWorldContinuous3D(gym.Env):
             visibility_3D=12.0,
             task_type = "NAVIGATION"
             ):
-
+        self.maze_type = "Continuous3D"
         self.enable_render = enable_render
         self.render_viewsize = render_scale
         self.maze_core = MazeCoreContinuous3D(
@@ -173,6 +173,8 @@ class MazeWorldDiscrete2D(gym.Env):
             max_steps = 5000,
             task_type = "NAVIGATION",
             visibility_2D = 1):
+
+        self.maze_type = "Discrete2D"
         self.enable_render = enable_render
         self.maze_core = MazeCoreDiscrete2D(visibility_2D=visibility_2D, max_steps=max_steps, task_type=task_type)
         self.render_viewsize = render_scale

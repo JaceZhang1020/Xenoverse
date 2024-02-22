@@ -4,6 +4,7 @@
 import gym
 import sys
 import l3c.mazeworld
+import time
 from l3c.mazeworld import MazeTaskSampler
 from l3c.mazeworld.agents import SmartSLAMAgent
 from numpy import random
@@ -24,7 +25,6 @@ def test_agent_maze(n=15,
         maze_env = gym.make("mazeworld-continuous-3D-v1", enable_render=False, max_steps=max_steps, task_type=task_type)
     else:
         raise Exception("No such maze world type %s"%task_type)
-    agent = SmartSLAMAgent(maze_type=maze_type)
 
     task = MazeTaskSampler(n=n, allow_loops=True, 
             wall_density=density,
@@ -33,13 +33,19 @@ def test_agent_maze(n=15,
             verbose=False)
 
     maze_env.set_task(task)
-    observation = maze_env.reset()
+
+    # Must intialize agent after reset
+    agent = SmartSLAMAgent(maze_env=maze_env, render=False)
+
     done=False
+    observation = maze_env.reset()
     sum_reward = 0
     reward = 0
     while not done:
-        action = agent.step(observation, reward, maze_env)
-        state, reward, done, _ = maze_env.step(action)
+        action = agent.step(observation, reward)
+        observation, reward, done, _ = maze_env.step(action)
+        #print("action:", action, ", reward:", reward)
+        time.sleep(0.01)
         sum_reward += reward
     print("...Test Finishes. Get score %f, for maze_type = %s task_type = %s, n = %d, steps = %s\n\n---------\n\n"%(sum_reward, maze_type, task_type, n, max_steps))
 
@@ -47,7 +53,7 @@ if __name__=="__main__":
     for n in [9, 15, 25]:
         for task_type in ["NAVIGATION", "SURVIVAL"]:
             for maze_type in ["Discrete2D", "Discrete3D", "Continuous3D"]:
-                n_landmarks=random.randint(2,10)
-                density=random.random() * 0.50
+                n_landmarks=random.randint(5,10)
+                density=(random.random() + 0.50) * 0.30
                 test_agent_maze(n=n, task_type=task_type, density=density, maze_type=maze_type, n_landmarks=n_landmarks)
-                print("\n\nCongratulations!!!\n\nAll Tests Have Been Passed\n\n")
+    print("\n\nCongratulations!!!\n\nAll Tests Have Been Passed\n\n")

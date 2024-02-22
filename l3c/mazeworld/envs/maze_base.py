@@ -134,15 +134,16 @@ class MazeBase(object):
         if(self.task_type == "SURVIVAL"):
             self.refresh_landmark_attr()
 
-        reward = self._instant_rewards[agent_grid_idx] + self._step_reward
-
         if(self.task_type == "SURVIVAL"):
-            self._life = min(reward + self._life, self._max_life)
+            reward = self._instant_rewards[agent_grid_idx] # In survival mode, the step reward is not counted
+            self._life += self._step_reward
+            self._life = min(self._instant_rewards[agent_grid_idx] + self._life, self._max_life)
             landmark_id = self._cell_landmarks[agent_grid_idx]
             if(landmark_id >= 0 and self._landmarks_refresh_countdown[landmark_id] > self._landmarks_refresh_interval):
                  self._landmarks_refresh_countdown[landmark_id] = self._landmarks_refresh_interval
             done = self._life < 0.0 or self.episode_steps_limit()
         elif(self.task_type == "NAVIGATION"):
+            reward = self._instant_rewards[agent_grid_idx] + self._step_reward
             done = False
             if(self.reach_goal()):
                 done = self.refresh_command()
@@ -276,6 +277,11 @@ class MazeBase(object):
     def get_loc_grid(self, loc):
         p_x = int(loc[0] / self._cell_size)
         p_y = int(loc[1] / self._cell_size)
+        return [p_x, p_y]
+
+    def get_loc_grid_float(self, loc):
+        p_x = (loc[0] / self._cell_size)
+        p_y = (loc[1] / self._cell_size)
         return [p_x, p_y]
 
     def movement_control(self, keys):
