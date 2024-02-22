@@ -109,6 +109,8 @@ l3c/mazeworld/tests/test.py
 
 We implement a smart agent with simulated localization and mapping capbability. The agent does not have all the ground truth information from the beginning, however, it has perfect memory and planning algorithm, and trade-off exploration & exploitation as well, (which can be regarded as the ideal policy). Below is an example to use the smart-agent API
 ```python
+from l3c.mazeworld.agents import SmartSLAMAgent
+
 agent = SmartSLAMAgent(maze_env=maze_env, render=True)
 action = agent.step(observation, reward)
 ```
