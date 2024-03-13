@@ -48,7 +48,7 @@ class MazeBase(object):
         At the same time, update the instant_rewards
         Valid only for ``NAVIGATION`` mode
         """
-        if(self.task_type is not "NAVIGATION"):
+        if(self.task_type != "NAVIGATION"):
             return
         if(self._command is not None):
             x,y = self._landmarks_coordinates[self._command]
@@ -195,7 +195,7 @@ class MazeBase(object):
                 pygame.draw.rect(scr, landmarks_color(landmarks_id), 
                         (x * self._render_cell_size + offset[0], y * self._render_cell_size + offset[1],
                         self._render_cell_size, self._render_cell_size), width=0)
-        if(self.task_type is "SURVIVAL"):
+        if(self.task_type == "SURVIVAL"):
             txt_life = self._font.render("Life: %f"%self._life, 0, pygame.Color("green"))
             scr.blit(txt_life,(offset[0] + 90, offset[1] + 10))
 

@@ -85,6 +85,9 @@ class MazeWorldDiscrete3D(gym.Env):
         if(self.enable_render):
             self.key_done, self.keyboard_press = self.maze_core.render_update()
 
+    def get_loc_map(self, map_range=2):
+        return self.maze_core.get_loc_map(map_rang=map_range)
+
     def save_trajectory(self, file_name):
         self.maze_core.render_trajectory(file_name)
 
@@ -163,6 +166,9 @@ class MazeWorldContinuous3D(gym.Env):
         if(self.enable_render):
             self.key_done, self.keyboard_press = self.maze_core.render_update()
 
+    def get_loc_map(self, map_range=2):
+        return self.maze_core.get_loc_map(map_rang=map_range)
+
     def save_trajectory(self, file_name):
         self.maze_core.render_trajectory(file_name)
 
@@ -231,6 +237,9 @@ class MazeWorldDiscrete2D(gym.Env):
             raise NotImplementedError("Only human mode is supported")
         if(self.enable_render):
             self.key_done, self.keyboard_press = self.maze_core.render_update()
+
+    def get_loc_map(self, map_range=2):
+        return self.maze_core.get_loc_map(map_rang=map_range)
 
     def save_trajectory(self, file_name, additional=None):
         self.maze_core.render_trajectory(file_name, additional=additional)
