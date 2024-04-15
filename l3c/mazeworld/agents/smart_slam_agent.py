@@ -180,7 +180,6 @@ class SmartSLAMAgent(AgentBase):
         deta_ori = int(deta_ori) % 4 + deta_ori - int(deta_ori)
         if(deta_ori > 2):
             deta_ori -= 4
-        print(deta_ori, req_ori, self._agent_ori, path)
         if(numpy.abs(deta_ori) < 0.2):
             return 4 #(0, 1)
         elif(deta_ori < 0):
