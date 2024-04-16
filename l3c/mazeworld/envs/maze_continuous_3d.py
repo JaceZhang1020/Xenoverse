@@ -53,7 +53,8 @@ class MazeCoreContinuous3D(MazeBase):
             raise Exception("No such task type: %s" % task_type)
         return super(MazeCoreContinuous3D, self).reset()
 
-    def do_action(self, turn_rate, walk_speed, dt=0.10):
+    def do_action(self, action, dt=0.10):
+        turn_rate, walk_speed = action
         turn_rate = numpy.clip(turn_rate, -1, 1) * PI
         walk_speed = numpy.clip(walk_speed, -1, 1)
         self._agent_ori, self._agent_loc = vector_move_with_collision(
@@ -101,7 +102,7 @@ class MazeCoreContinuous3D(MazeBase):
 
     def update_observation(self):
         if(self.task_type == "SURVIVAL"):
-            self._observation, cell_exposed = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
+            self._observation, cell_exposed = maze_view(numpy.array(self._agent_loc, dtype=numpy.float32), self._agent_ori, self._agent_height, 
                     self._cell_walls, self._cell_active_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
                     MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
                     self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
@@ -114,7 +115,7 @@ class MazeCoreContinuous3D(MazeBase):
             self._observation[start_x:end_x, start_y:end_y, 1] = 0
             self._observation[start_x:end_x, start_y:end_y, 2] = 0
         elif(self.task_type == "NAVIGATION"):
-            self._observation, cell_exposed = maze_view(self._agent_loc, self._agent_ori, self._agent_height, 
+            self._observation, cell_exposed = maze_view(numpy.array(self._agent_loc, dtype=numpy.float32), self._agent_ori, self._agent_height, 
                     self._cell_walls, self._cell_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
                     MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
                     self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)

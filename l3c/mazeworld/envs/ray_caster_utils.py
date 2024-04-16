@@ -4,9 +4,6 @@ import time
 from numba import njit
 from l3c.mazeworld.envs.dynamics import PI, PI_4
 
-FAR_RGB = numpy.array([0, 0, 0], dtype="float32")
-A_ARR = PI / 3
-
 class LandmarksRGB(object):
     def __init__(self):
         self._landmarks_rgb = dict()
@@ -131,6 +128,8 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
     max_cell_j = cell_walls.shape[1]
     pixel_factor = pixel_size / l_focal
     cell_exposed = numpy.zeros_like(cell_walls)
+
+    FAR_RGB = numpy.array([0, 0, 0], dtype="float32")
 
     # prepare some maths
     rgb_array = numpy.zeros(shape=(resolution_h, resolution_v, 3), dtype="int32")
@@ -257,6 +256,7 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
     return rgb_array, cell_exposed
 
 def paint_agent_arrow(scr, color, offset, pos, angle, l1, l2):
+    A_ARR = PI / 3
     A_A = angle - (PI - A_ARR)
     A_B = angle + (PI - A_ARR)
     pos_S = (pos[0] + offset[0], pos[1] + offset[1])

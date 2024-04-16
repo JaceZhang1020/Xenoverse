@@ -235,7 +235,7 @@ class MazeBase(object):
     def render_trajectory(self, file_name, additional=None):
         # Render god view with record on the trajectory
         if(additional is not None):
-            aw, ah = additional["surfaces"][0].get_width(),additional["surfaces"][0].get_height()
+            aw, ah = (additional["surfaces"][0].get_width(),additional["surfaces"][0].get_height())
         else:
             aw, ah = (0, 0)
 
@@ -243,9 +243,6 @@ class MazeBase(object):
         traj_screen.fill(pygame.Color("white"))
         traj_screen.blit(self._surf_god, (0, 0))
 
-        #pygame.draw.rect(traj_screen, pygame.Color("red"), 
-        #        (self._agent_grid[0] * self._render_cell_size, self._agent_grid[1] * self._render_cell_size,
-        #        self._render_cell_size, self._render_cell_size), width=0)
         if(self.task_type == "SURVIVAL"):
             self.render_godview_dyna(traj_screen, (0, 0))
 
