@@ -16,12 +16,12 @@
 
 import sys
 import argparse
-from l3c.metalm import MetaLMv1
-from l3c.metalm import MetaLMv2
+from l3c.rpl import RPLv1
+from l3c.rpl import RPLv2
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Generating Pseudo-Training Data')
-    parser.add_argument('--version', type=str, default='v1')
+    parser.add_argument('--version', type=str, default='v2')
     parser.add_argument('--vocab_size', type=int, default=64)
     parser.add_argument('--embedding_size', type=int, default=16)
     parser.add_argument('--hidden_size', type=int, default=16)
@@ -31,19 +31,20 @@ if __name__=='__main__':
     parser.add_argument('--n_gram', type=float, default=3)
     parser.add_argument('--sequence_length', type=int, default=4096)
     parser.add_argument('--samples', type=int, default=100)
+    parser.add_argument('--output_type', type=str, choices=['txt', 'npy'], default='txt')
     parser.add_argument('--output', type=str, default=None)
 
     args = parser.parse_args()
 
     if(args.version == 'v1'):
-        dataset = MetaLMv1(
+        dataset = RPLv1(
                 V=args.vocab_size,
                 n=args.elements_number,
                 l=args.elements_length,
                 e=args.error_rate,
                 L=args.sequence_length)
     elif(args.version == 'v2'):
-        dataset = MetaLMv2(
+        dataset = RPLv2(
                 V=args.vocab_size,
                 n=args.n_gram,
                 d=args.embedding_size,
@@ -51,7 +52,12 @@ if __name__=='__main__':
                 e=args.error_rate,
                 L=args.sequence_length)
 
-    if(args.output is None):
-        dataset.generate_to_file(args.samples, sys.stdout)
-    else:
-        dataset.generate_to_file(args.samples, args.output)
+    if(args.output_type == 'npy'):
+        if(args.output is None):
+            raise Exception("Must specify --output when output_type is npy")
+        dataset.generate_npy(args.samples, args.output)
+    elif(args.output_type == 'txt'):
+        if(args.output is None):
+            dataset.generate_text(args.samples, sys.stdout)
+        else:
+            dataset.generate_text(args.samples, args.output)

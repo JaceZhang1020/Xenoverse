@@ -18,7 +18,7 @@ import numpy
 import gym
 from numpy import random
 
-class MetaLMv1(gym.Env):
+class RPLv1(gym.Env):
     """
     Meta Language Model
     MetaLM(V, n, l, e, L) generates n Exponential(1/l)-length sequences, which appears repeatedly until reaching length L
@@ -96,7 +96,7 @@ class MetaLMv1(gym.Env):
         labels = numpy.asarray(labels)
         return features, labels
 
-    def generate_to_file(self, size, output_stream):
+    def generate_text(self, size, output_stream):
         features, labels = self.batch_generator(size)
         if(isinstance(output_stream, _io.TextIOWrapper)):
             need_close = False
@@ -108,6 +108,10 @@ class MetaLMv1(gym.Env):
             output_stream.write("\n")
         if(need_close):
             output_stream.close()
+
+    def generate_npy(self, size, file_name):
+        feas, labs = self.batch_generator(size)
+        numpy.save(file, numpy.stack([feas, labs], axis=0))
 
     @property
     def VocabSize(self):

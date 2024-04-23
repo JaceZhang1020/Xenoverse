@@ -87,7 +87,7 @@ class RandomRNN(object):
 
         return numpy.transpose(numpy.asarray(seqs, dtype="int32"))
 
-class MetaLMv2(gym.Env):
+class RPLv2(gym.Env):
     """
     Pseudo Langauge Generated from RNN models
     V: vocabulary size
@@ -115,33 +115,33 @@ class MetaLMv2(gym.Env):
     def data_generator(self, seed=None):
         nn = RandomRNN(n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
         tokens = nn.forward(self.L)[0]
-        feas = tokens[:-1]
-        labs = tokens[1:]
-        return feas, labs
+        return tokens
 
     def batch_generator(self, batch_size, seed=None):
         nn = RandomRNN(batch = batch_size, n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
         tokens = nn.forward(self.L)
-        feas = tokens[:,:-1]
-        labs = tokens[:,1:]
-        return feas, labs
+        return tokens
 
-    def generate_to_file(self, size, output_stream):
-        feas,labs = self.batch_generator(size)
+    def generate_text(self, size, output_stream):
+        tokens = self.batch_generator(size)
         if(isinstance(output_stream, _io.TextIOWrapper)):
             need_close = False
         elif(isinstance(output_stream, str)):
             output_stream = open(output_stream, "w")
             need_close = True
-        for i in range(feas.shape[0]):
-            output_stream.write("\t".join(map(lambda x:"%s,%s"%(x[0],x[1]), zip(feas[i].tolist(), labs[i].tolist()))))
+        for i in range(tokens.shape[0]):
+            output_stream.write("\t".join(map(str, tokens[i].tolist())))
             output_stream.write("\n")
         if(need_close):
             output_stream.close()
 
+    def generate_npy(self, size, file_name):
+        tokens = self.batch_generator(size)
+        numpy.save(file_name, tokens)
+
     @property
     def VocabSize(self):
-        return self.V + 1
+        return self.V
 
     @property
     def SepID(self):
@@ -149,8 +149,8 @@ class MetaLMv2(gym.Env):
 
     @property
     def MaskID(self):
-        return 0
+        return -1
 
     @property
     def PaddingID(self):
-        return 0
+        return -1

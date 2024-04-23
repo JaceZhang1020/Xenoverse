@@ -255,6 +255,11 @@ class MazeBase(object):
             n = [(n[0] + 0.5 + noise) * self._render_cell_size, (n[1] + 0.5 + noise) *  self._render_cell_size]
             pygame.draw.line(traj_screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 0, 255), p, n, width=2)
 
+        for landmarks_id, (x,y) in enumerate(self._landmarks_coordinates):
+            pygame.draw.rect(traj_screen, landmarks_color(landmarks_id), 
+                    (x * self._render_cell_size, y * self._render_cell_size,
+                    self._render_cell_size, self._render_cell_size), width=0)
+
         # paint some additional surfaces where necessary
         if(additional != None):
             for i in range(len(additional["surfaces"])):
