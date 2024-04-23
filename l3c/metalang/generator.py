@@ -16,8 +16,8 @@
 
 import sys
 import argparse
-from l3c.rpl import RPLv1
-from l3c.rpl import RPLv2
+from l3c.metalang import MetaLangV1
+from l3c.metalang import MetaLangV2
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Generating Pseudo-Training Data')
@@ -37,14 +37,14 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     if(args.version == 'v1'):
-        dataset = RPLv1(
+        dataset = MetaLangV1(
                 V=args.vocab_size,
                 n=args.elements_number,
                 l=args.elements_length,
                 e=args.error_rate,
                 L=args.sequence_length)
     elif(args.version == 'v2'):
-        dataset = RPLv2(
+        dataset = MetaLangV2(
                 V=args.vocab_size,
                 n=args.n_gram,
                 d=args.embedding_size,

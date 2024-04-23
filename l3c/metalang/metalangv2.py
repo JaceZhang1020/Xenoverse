@@ -18,7 +18,7 @@ import numpy
 import gym
 from numpy import random
 
-class RandomRNN(object):
+class RandomNGram(object):
     def __init__(self, batch=1, n_emb=16, n_hidden=64, n_vocab=256, n_gram=3, hardness=5, seed=None):
         self.n_emb = n_emb
         self.n_hidden = n_hidden
@@ -87,7 +87,7 @@ class RandomRNN(object):
 
         return numpy.transpose(numpy.asarray(seqs, dtype="int32"))
 
-class RPLv2(gym.Env):
+class MetaLangV2(gym.Env):
     """
     Pseudo Langauge Generated from RNN models
     V: vocabulary size
@@ -113,12 +113,12 @@ class RPLv2(gym.Env):
         assert n > 1 and V > 1 and N > 1 and L > 1 
 
     def data_generator(self, seed=None):
-        nn = RandomRNN(n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
+        nn = RandomNGram(n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
         tokens = nn.forward(self.L)[0]
         return tokens
 
     def batch_generator(self, batch_size, seed=None):
-        nn = RandomRNN(batch = batch_size, n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
+        nn = RandomNGram(batch = batch_size, n_emb = self.d, n_gram=self.n, n_hidden = self.N, n_vocab = self.V, hardness=self.hardness, seed=seed)
         tokens = nn.forward(self.L)
         return tokens
 

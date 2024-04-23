@@ -13,12 +13,12 @@
 # limitations under the License.
 
 from gym.envs.registration import register
-from l3c.rpl.rplv1 import RPLv1
-from l3c.rpl.rplv2 import RPLv2
+from l3c.metalang.metalangv1 import MetaLangV1
+from l3c.metalang.metalangv2 import MetaLangV2
 
 register(
-    id='randomized-pseudo-language-v1',
-    entry_point='l3c.rpl:RPLv1',
+    id='meta-language-v1',
+    entry_point='l3c.metalang:MetaLangV1',
     kwargs={"V": 64,
         "n": 10,
         "l": 64,
@@ -28,8 +28,8 @@ register(
 )
 
 register(
-    id='randomized-pseudo-language-v2',
-    entry_point='l3c.rpl:RPLv2',
+    id='meta-language-v2',
+    entry_point='l3c.metalang:MetaLangV2',
     kwargs={"V": 64,
         "n": 16,
         "N": 16,
