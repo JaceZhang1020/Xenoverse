@@ -21,7 +21,7 @@ from l3c.rpl import RPLv2
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Generating Pseudo-Training Data')
-    parser.add_argument('--version', type=str, default='v2')
+    parser.add_argument('--version', type=str, choices=['v1', 'v2'], default='v2')
     parser.add_argument('--vocab_size', type=int, default=64)
     parser.add_argument('--embedding_size', type=int, default=16)
     parser.add_argument('--hidden_size', type=int, default=16)

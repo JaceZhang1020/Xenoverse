@@ -13,7 +13,7 @@ python -m l3c.rpl.data_generator --help
 
 optional arguments:
   -h, --help            show this help message and exit
-  --version VERSION      currently support v1, v2, v1: generate with repeated random sequences; v2: generate with randomized n-gram NNs
+  --version {v1,v2}     v1: generate with repeated random sequences; v2: generate with randomized n-gram NNs
   --vocab_size VOCAB_SIZE
   --embedding_size EMBEDDING_SIZE
   --hidden_size HIDDEN_SIZE
