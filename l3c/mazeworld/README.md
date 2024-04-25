@@ -122,7 +122,7 @@ We implement a smart agent with simulated localization and mapping capbability. 
 ```python
 from l3c.mazeworld.agents import SmartSLAMAgent
 
-agent = SmartSLAMAgent(maze_env=maze_env, render=True)
+agent = SmartSLAMAgent(maze_env=maze_env, memory_keep_ratio=0.25, render=True) # memory_keep_ratio=0.25 means the agent only keeps 25% of what it sees in the long term memory
 action = agent.step(observation, reward)
 ```
 It's important to be aware that the "render=True" option cannot be utilized concurrently with "enable_render=True" when configuring the maze environment. This is because the visualization may experience interference under such circumstances.Developers can write their own agents following the guidance of agents/agent_base.py

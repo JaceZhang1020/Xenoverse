@@ -35,7 +35,7 @@ def test_agent_maze(n=15,
     maze_env.set_task(task)
 
     # Must intialize agent after reset
-    agent = SmartSLAMAgent(maze_env=maze_env, render=False)
+    agent = SmartSLAMAgent(maze_env=maze_env, memory_keep_ratio=0.25, render=False)
 
     done=False
     observation = maze_env.reset()
