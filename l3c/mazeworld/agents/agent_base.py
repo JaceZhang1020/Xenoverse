@@ -28,6 +28,13 @@ class AgentBase(object):
         self._nx, self._ny = self._god_info.shape
         self.neighbors = [(-1, 0), (1, 0), (0, 1), (0, -1)]
         self._landmarks_visit = dict()
+        self._short_term_memory = list()
+
+        if("short_term_memory_size" not in kwargs):
+            self.short_term_memory_size = 3
+        if("memory_keep_ratio" not in kwargs):
+            self.memory_keep_ratio = 1.0
+        self._long_term_memory = numpy.zeros((self._nx, self._ny), dtype=numpy.int8)
 
         # Render
         if(self.render):
@@ -41,7 +48,20 @@ class AgentBase(object):
             self._command = self.maze_env.maze_core._command
         if(self.task_type == "SURVIVAL"):
             self._life = self.maze_env.maze_core._life
-        self._mask_info = self.maze_env.maze_core._cell_exposed
+
+        # Update long and short term memory
+        # Pop the eldest memory from short term memory and insert it to long term memory, but with losses.
+        self._short_term_memory.append(numpy.copy(self.maze_env.maze_core._cell_exposed))
+        if(len(self._short_term_memory) > self.short_term_memory_size):
+            to_longterm = self._short_term_memory.pop(0)
+            long_term_keep = (numpy.random.rand(self._nx, self._ny) < self.memory_keep_ratio).astype(numpy.int8)
+            self._long_term_memory = numpy.logical_or(self._long_term_memory, to_longterm * long_term_keep)
+
+        # Calculate the current memory: include the long term and short term memory
+        self._mask_info = numpy.copy(self._long_term_memory)
+        for i in range(len(self._short_term_memory)):
+            self._mask_info = numpy.logical_or(self._mask_info, self._short_term_memory[i])
+        
         self._agent_ori = (2.0 * self.maze_env.maze_core._agent_ori / PI)
         self._agent_loc = self.maze_env.maze_core._agent_loc
         self._cur_grid = deepcopy(self.maze_env.maze_core._agent_grid)
@@ -52,7 +72,6 @@ class AgentBase(object):
                 self._landmarks_cd.append(cd)
             else:
                 self._landmarks_cd.append(0)
-        self._exposed_info = self._god_info + self._mask_info - 1
         lid = self._god_info[self._cur_grid[0], self._cur_grid[1]]
         if(lid > 0):
             self._landmarks_visit[lid - 1] = 0

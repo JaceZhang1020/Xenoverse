@@ -16,11 +16,7 @@ MazeWorld is a powerful and efficient simulator for navigating a randomly genera
 
 You may try MazeWorld with your own keyboard with the following commands:
 ```bash
-python -m l3c.mazeworld.demo.keyboard_play_demo 
-```
-The above commands can be followed by the following optional arguments
-
-```
+python -m l3c.mazeworld.demo.keyboard_play_demo --help
   --maze_type {Discrete2D,Discrete3D,Continuous3D}
   --scale SCALE
   --task_type {SURVIVAL,NAVIGATION}
@@ -42,7 +38,23 @@ The above commands can be followed by the following optional arguments
 
 We implement a smart agent that can do SLAM & Planning in MazeWorlds. You may check the demonstration with the following commands:
 ```bash
-python -m l3c.mazeworld.demo.agent_play_demo 
+python -m l3c.mazeworld.demo.agent_play_demo --help
+  --maze_type {Discrete2D,Discrete3D,Continuous3D}
+  --scale SCALE
+  --task_type {SURVIVAL,NAVIGATION}
+  --max_steps MAX_STEPS
+  --density DENSITY     Density of the walls satisfying that all spaces are connected
+  --visibility_2D VISIBILITY_2D Grids vision range, only valid in 2D mode
+  --visibility_3D VISIBILITY_3D 3D vision range, Only valid in 3D mode
+  --wall_height WALL_HEIGHT Only valid in 3D mode
+  --cell_size CELL_SIZE Only valid in 3D mode
+  --step_reward STEP_REWARD Default rewards per-step
+  --n_landmarks N_LANDMARKS Number of landmarks, valid for both SURVIVAL and NAVIGATION task
+  --r_landmarks R_LANDMARKS Average rewards of the landmarks, only valid in SURVIVAL task
+  --cd_landmarks CD_LANDMARKS Refresh interval of landmarks
+  --save_replay SAVE_REPLAY Save the replay trajectory in file
+  --memory_keep_ratio MEMORY_KEEP_RATIO Keep ratio of memory when the agent switch from short to long term memory. 1.0 means perfect memory, 0.0 means no memory
+  --verbose VERBOSE
 ```
 ![Demonstration-Agent-Control](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/AGENT-1-demo.gif) 
 

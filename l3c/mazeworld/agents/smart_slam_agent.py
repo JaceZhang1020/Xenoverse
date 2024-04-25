@@ -7,6 +7,14 @@ from pygame import font
 from l3c.mazeworld.envs.dynamics import PI
 from l3c.mazeworld.envs.ray_caster_utils import landmarks_color, landmarks_rgb, landmarks_rgb_arr, paint_agent_arrow
 
+def aggregate_unexplorations(mask_info):
+    ret_mask = mask_info.astype(numpy.int32)
+    nx, ny = mask_info.shape
+    for dx,dy in [(1, 1), (1, 0), (0, 1), (1, 2), (2, 1), (2, 2), (0, 2), (2, 0)]:
+        ret_mask[dx:,dy:] = ret_mask[dx:,dy:] + mask_info[:nx-dx, :ny-dy]
+        ret_mask[:nx-dx, :ny-dy] = ret_mask[:nx-dx, :ny-dy] + mask_info[dx:, dy:]
+    return ret_mask * mask_info
+
 class SmartSLAMAgent(AgentBase):
     def render_init(self, view_size=(640, 640)):
         """
@@ -240,8 +248,10 @@ class SmartSLAMAgent(AgentBase):
             cost=cost_map[sel_x, sel_y]
         return path
 
+
     def exploration(self):
-        utility = self._cost_map + 10000 * self._mask_info
+        aggr = aggregate_unexplorations(self._mask_info)
+        utility = self._cost_map + 10000 * self._mask_info - 3 * aggr
         if(numpy.argmin(utility) >= 10000):
             return None 
         target_idx = numpy.unravel_index(numpy.argmin(utility), utility.shape)

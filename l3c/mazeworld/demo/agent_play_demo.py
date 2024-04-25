@@ -22,6 +22,8 @@ if __name__=='__main__':
     parser.add_argument('--r_landmarks', type=float, default=0.50, help="Average rewards of the landmarks, only valid in SURVIVAL task")
     parser.add_argument('--cd_landmarks', type=int, default=200, help="Refresh interval of landmarks")
     parser.add_argument('--save_replay', type=str, default=None, help="Save the replay trajectory in file")
+    parser.add_argument('--memory_keep_ratio', type=float, default=0.85, 
+                        help="Keep ratio of memory when the agent switch from short to long term memory. 1.0 means perfect memory, 0.0 means no memory")
     parser.add_argument('--verbose', type=bool, default=False)
 
     args = parser.parse_args()
@@ -46,7 +48,7 @@ if __name__=='__main__':
             verbose=True)
     maze_env.set_task(task)
 
-    agent = SmartSLAMAgent(maze_env=maze_env, render=True)
+    agent = SmartSLAMAgent(maze_env=maze_env, memory_keep_ratio=args.memory_keep_ratio, render=True)
 
     observation = maze_env.reset()
     done=False
