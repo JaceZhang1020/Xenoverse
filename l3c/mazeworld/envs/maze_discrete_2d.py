@@ -76,6 +76,6 @@ class MazeCoreDiscrete2D(MazeBase):
             # For navigation task, the color of the center represents the navigation target
             self._observation[self.visibility_2D, self.visibility_2D] = landmarks_rgb[self._command]
 
-        self._cell_exposed *= 0
+        self._cell_exposed = numpy.zeros_like(self._cell_walls).astype(numpy.bool)
         self._cell_exposed[(self._agent_grid[0] - self.visibility_2D) : (self._agent_grid[0] + self.visibility_2D + 1), \
                 (self._agent_grid[1] - self.visibility_2D) : (self._agent_grid[1] + self.visibility_2D + 1)] = True
