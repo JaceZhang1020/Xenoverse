@@ -8,6 +8,6 @@ In-Context Learning entails a different learning process than that of gradient d
 
 - [MazeWorlds](l3c/mazeworld): 2D/3D maze generators for task generalization
 
-- [RPL](l3c/rpl): Randomized Pseudo-Language
+- [MetaLanguage](l3c/metalang): Pseudo-language generated from randomized hyper-parameters
 
 - [Bandits](l3c/bandits): Bandits task generalization
