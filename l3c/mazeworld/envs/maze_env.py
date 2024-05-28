@@ -74,7 +74,11 @@ class MazeWorldEnvBase(gym.Env):
     def get_loc_map(self, map_range=2):
         return self.maze_core.get_loc_map(map_rang=map_range)
 
-    def get_target_gt_direction(self):
+    def get_target_location(self):
+        """
+        Acquire relative position of the target to the agent
+        Return (Distance, Angle)
+        """
         if(self.task_type != "NAVIGATION"):
             raise Exception("Only \"NAVIGATION\" task type is supported")
         target_id = self.maze_core._commands_sequence[self.maze_core._commands_sequence_idx]
@@ -87,7 +91,8 @@ class MazeWorldEnvBase(gym.Env):
             angle += 2 * numpy.pi
         elif(angle > numpy.pi):
             angle -= 2 * numpy.pi
-        return angle
+        dist = numpy.sqrt(numpy.sum(deta_grid * deta_grid))
+        return dist, angle
 
     def save_trajectory(self, file_name, view_size=480):
         if(not self.enable_render):
