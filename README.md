@@ -1,8 +1,9 @@
-# L3C - Life Long Learning In Context
+# L3C
 
-L3C provide abundant environments for Lifelong Learning (L3) in Context, with long-term dependencies on the Contexts for task generalization.
-
-In-Context Learning entails a different learning process than that of gradient descent, as it involves feeding data through prompts instead. Our objective is to enhance lifelong learning research by utilizing prompts, which involve agents that learn through interaction in a forward-only manner.
+L3C provides variant environments facilitating In-Context Learning, featured in the following assets:
+- Minimal knowledge transferrable among huge amounts of tasks
+- Lifelong In-Context Learning
+- Generative and Interactive
 
 # Environments Updating
 
@@ -11,3 +12,11 @@ In-Context Learning entails a different learning process than that of gradient d
 - [MetaLanguage](l3c/metalang): Pseudo-language generated from randomized hyper-parameters
 
 - [Bandits](l3c/bandits): Bandits task generalization
+
+- [L3C_Baselines](https://github.com/FutureAGI/L3C_Baselines): An implementation of the baseline solutions to the above tasks
+
+# Installation
+
+```bash
+pip install l3c
+```

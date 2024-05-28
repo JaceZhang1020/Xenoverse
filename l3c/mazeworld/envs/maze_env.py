@@ -25,6 +25,7 @@ class MazeWorldEnvBase(gym.Env):
         self.maze_type = maze_type
         self.enable_render = enable_render
         self.render_viewsize = render_scale
+        self.task_type = task_type
 
         self.need_reset = True
         self.need_set_task = True
@@ -72,6 +73,21 @@ class MazeWorldEnvBase(gym.Env):
 
     def get_loc_map(self, map_range=2):
         return self.maze_core.get_loc_map(map_rang=map_range)
+
+    def get_target_gt_direction(self):
+        if(self.task_type != "NAVIGATION"):
+            raise Exception("Only \"NAVIGATION\" task type is supported")
+        target_id = self.maze_core._commands_sequence[self.maze_core._commands_sequence_idx]
+        target_grid = self.maze_core._landmarks_coordinates[target_id]
+        deta_grid = numpy.zeros(shape=(2,), dtype=numpy.float32)
+        deta_grid[0] = target_grid[0] - self.maze_core._agent_grid[0]
+        deta_grid[1] = target_grid[1] - self.maze_core._agent_grid[1]
+        angle = numpy.arctan2(deta_grid[1], deta_grid[0]) - self.maze_core._agent_ori
+        if(angle < -numpy.pi):
+            angle += 2 * numpy.pi
+        elif(angle > numpy.pi):
+            angle -= 2 * numpy.pi
+        return angle
 
     def save_trajectory(self, file_name, view_size=480):
         if(not self.enable_render):
