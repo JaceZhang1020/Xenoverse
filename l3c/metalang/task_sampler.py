@@ -27,6 +27,8 @@ def TaskSamplerV2(seed=None,
                 _lambda=5.0):
     if(seed is not None):
         numpy.random.seed(seed)
+    if(isinstance(n_gram, list)):
+        n_gram = random.choice(n_gram)
     word_emb = numpy.random.normal(0, 1.0, size=(n_vocab, n_emb))
     weights_inputlayer = numpy.random.normal(0, 1.0, size=(n_gram, n_emb, n_hidden))
     bias_inputlayer = numpy.random.normal(0, 1.0, size=(n_gram, 1, n_hidden))
@@ -50,16 +52,18 @@ def TaskSamplerV1(seed=None,
                 n_patterns=10, 
                 n_gram=64,
                 error_ratio=0.1):
-        patterns = []
-        if(seed is not None):
-            numpy.random.seed(seed)
-        for _ in range(n_patterns):
-            l_r = max(3, numpy.random.poisson(n_gram))
-            patterns.append(random.randint(0, n_vocab, size=(l_r), dtype="int32"))
-        return {
-                'patterns': patterns,
-                'n_vocab': n_vocab,
-                'n_patterns': n_patterns,
-                'error_ratio': error_ratio,
-                'n_gram': n_gram
-            }
+    patterns = []
+    if(seed is not None):
+        numpy.random.seed(seed)
+    if(isinstance(n_gram, list)):
+        n_gram = random.choice(n_gram)
+    for _ in range(n_patterns):
+        l_r = max(3, numpy.random.poisson(n_gram))
+        patterns.append(random.randint(0, n_vocab, size=(l_r), dtype="int32"))
+    return {
+            'patterns': patterns,
+            'n_vocab': n_vocab,
+            'n_patterns': n_patterns,
+            'error_ratio': error_ratio,
+            'n_gram': n_gram
+        }

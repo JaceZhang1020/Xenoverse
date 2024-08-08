@@ -135,7 +135,7 @@ if __name__=='__main__':
     parser.add_argument('--hidden_size', type=int, default=16)
     parser.add_argument('--patterns_number', type=int, default=10)
     parser.add_argument('--error_rate', type=float, default=0.20)
-    parser.add_argument('--n_gram', type=int, default=3)
+    parser.add_argument('--n_gram', nargs='+', type=int, default=[3,4,5,6], help="A [List of] length n used for generating tasks")
     parser.add_argument('--lambda_weight', type=float, default=5.0, help="Lambda weight multiplied for softmax sampling in MetaLangV2")
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--sequence_length', type=int, default=4096)
