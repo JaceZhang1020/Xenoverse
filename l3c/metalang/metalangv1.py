@@ -31,26 +31,18 @@ class MetaLangV1(gym.Env):
     The task require the agent to recover the correct sequence.
     """
 
-    def __init__(self, 
-            V=64, 
-            n=10, 
-            l=64, 
-            e=0.10, 
-            L=2048):
+    def __init__(self, L=2048):
         self.L = int(L)
-        self.V = int(V)
-        self.lamb = l
-        self.n = n
-        self.e = float(e)
         self.mask_ratio = 0.30
-        assert n >= 1 and V > 1 and l > 1 and e > 0 and e < 1 and L > 1
+        self.task_set = False
+        assert self.L > 1
 
     def add_noise(self, seq):
         """
         Add noise to a sequence, return the new sequence
         """
-        noise_value = random.randint(0, self.V, size=(numpy.shape(seq)), dtype="int32")
-        noise_ratio = (random.random(size=(numpy.shape(seq))) < self.e).astype("int32")
+        noise_value = random.randint(0, self.n_vocab, size=(numpy.shape(seq)), dtype="int32")
+        noise_ratio = (random.random(size=(numpy.shape(seq))) < self.error_ratio).astype("int32")
         mask_ratio = (random.random(size=(numpy.shape(seq))) < self.mask_ratio).astype("int32")
         diff = noise_value - seq
         diff = diff * (noise_ratio!=0).astype("int32")
@@ -58,22 +50,19 @@ class MetaLangV1(gym.Env):
         new_seq = new_seq * (1 -  mask_ratio * noise_ratio)
         return new_seq
 
-    def elements_generator(self, seed=None):
-        elements = []
-        if(seed is not None):
-            numpy.random.seed(seed)
-        for _ in range(self.n):
-            l_r = max(3, numpy.random.poisson(self.lamb))
-            elements.append(random.randint(0, self.V, size=(l_r), dtype="int32"))
-        return elements
-
+    def set_task(self, task):
+        for key, val in task.items():
+            self.__dict__[key] = val
+        self.task_set = True
+        
     def data_generator(self, seed=None):
-        elements = self.elements_generator(seed=seed)
+        if(not self.task_set):
+            raise Exception("Please set task before using data generator")
         features = []
         labels = []
         cur_l = 0
         while cur_l < self.L + 1:
-            seq = elements[random.randint(0, self.n)]
+            seq = self.patterns[random.randint(0, self.n_patterns)]
             fea = self.add_noise(seq)
             sep = numpy.array([self.SepID], dtype="int32")
             features.append(fea)
@@ -115,7 +104,7 @@ class MetaLangV1(gym.Env):
 
     @property
     def VocabSize(self):
-        return self.V
+        return self.n_vocab
 
     @property
     def SepID(self):
