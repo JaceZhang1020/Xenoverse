@@ -2,6 +2,8 @@
 
 Generating Randomized Pseudo Meta-Language for Benchmarking Long-Term Dependency In-Context Learning
 
+- MetaLangv1: Generate by repeated random sequences
+- MetaLangv2: Generate from randomized n-gram neural network models
 
 # Usage
 
