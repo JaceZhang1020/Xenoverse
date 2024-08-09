@@ -29,9 +29,11 @@ class RandomNGram(object):
         e_x = numpy.exp(x - numpy.max(x, axis=-1, keepdims=True))
         return e_x / e_x.sum(axis=-1, keepdims=True)
 
-    def forward(self, l, batch=1):
+    def forward(self, l, batch=1, seed=None):
         #Generate n=batch sequences of length l under current task
         ind = 0
+        if(seed is not None):
+            numpy.random.seed(seed)
 
         def mean_var_norm(i):
             m_i = numpy.mean(i)
@@ -94,16 +96,16 @@ class MetaLangV2(gym.Env):
         self.nn = RandomNGram(task)
         self.task_set = True
 
-    def data_generator(self):
+    def data_generator(self, seed=None):
         if(self.task_set):
-            tokens = self.nn.forward(self.L)[0]
+            tokens = self.nn.forward(self.L, seed=seed)[0]
         else:
             raise Exception("Please set task before using data generator")
         return tokens
 
-    def batch_generator(self, batch_size):
+    def batch_generator(self, batch_size, seed=None):
         if(self.task_set):
-            tokens = self.nn.forward(self.L, batch=batch_size)
+            tokens = self.nn.forward(self.L, batch=batch_size, seed=seed)
         else:
             raise Exception("Please set task before using data generator")
         return tokens

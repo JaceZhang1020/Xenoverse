@@ -115,7 +115,8 @@ def metalang_generator(sample_type='sequences',
         random.shuffle(tasks)
         for i in range(batch_number):
             env.set_task(tasks[i])
-            token = env.batch_generator(batch_size)
+            seed_base = int(time.time()*1000 % 1000000)
+            token = env.batch_generator(batch_size, seed=i+seed_base)
             tokens.append(token)
         tokens=numpy.concatenate(tokens, axis=0)
 
