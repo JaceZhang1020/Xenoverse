@@ -23,8 +23,9 @@ class LandmarksRGB(object):
         self._landmarks_rgb[13] = numpy.array([128, 96, 0], dtype="float32") #
         self._landmarks_rgb[14] = numpy.array([128, 0, 96], dtype="float32") #
 
-    def color(self, i):
-        return pygame.Color(int(self._landmarks_rgb[i][0]), int(self._landmarks_rgb[i][1]), int(self._landmarks_rgb[i][2]), 255)
+    def color(self, i, opacity=0.0):
+        real_color = (1 - opacity) * self._landmarks_rgb[i] + opacity * numpy.array([255, 255, 255])
+        return pygame.Color(int(real_color[0]), int(real_color[1]), int(real_color[2]), 255)
 
     @property
     def rgb(self):

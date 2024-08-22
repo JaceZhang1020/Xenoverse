@@ -74,6 +74,9 @@ class MazeWorldEnvBase(gym.Env):
     def get_loc_map(self, map_range=2):
         return self.maze_core.get_loc_map(map_rang=map_range)
 
+    def get_global_map(self, resolution=(128, 128)):
+        return self.maze_core.get_global_map(resolution=resolution)
+
     def get_target_location(self):
         """
         Acquire relative position of the target to the agent

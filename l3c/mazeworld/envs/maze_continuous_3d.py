@@ -80,6 +80,7 @@ class MazeCoreContinuous3D(MazeBase):
         paint_agent_arrow(self._screen, pygame.Color("gray"), (self._view_size, 0), (agent_pos[0], agent_pos[1]), self._agent_ori, 
                 0.4 * self._pos_conversion, 0.5 * self._pos_conversion)
 
+
     def movement_control(self, keys):
         #Keyboard control cases
         turn_rate = None
