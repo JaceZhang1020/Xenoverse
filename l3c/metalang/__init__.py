@@ -15,25 +15,17 @@
 from gym.envs.registration import register
 from l3c.metalang.metalangv1 import MetaLangV1
 from l3c.metalang.metalangv2 import MetaLangV2
+from l3c.metalang.task_sampler import TaskSamplerV1, TaskSamplerV2
+from l3c.metalang.generator import metalang_generator
 
 register(
     id='meta-language-v1',
     entry_point='l3c.metalang:MetaLangV1',
-    kwargs={"V": 64,
-        "n": 10,
-        "l": 64,
-        "e": 0.10,
-        "L": 2048
-    }
+    kwargs={"L": 2048}
 )
 
 register(
     id='meta-language-v2',
     entry_point='l3c.metalang:MetaLangV2',
-    kwargs={"V": 64,
-        "n": 16,
-        "N": 16,
-        "e": 0.10,
-        "L": 2048
-    }
+    kwargs={"L": 2048}
 )
