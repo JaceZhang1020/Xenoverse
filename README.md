@@ -11,8 +11,6 @@ L3C provides variant environments facilitating In-Context Learning, featured in 
 
 - [MetaLanguage](l3c/metalang): Pseudo-language generated from randomized hyper-parameters
 
-- [Bandits](l3c/bandits): Bandits task generalization
-
 - [L3C_Baselines](https://github.com/FutureAGI/L3C_Baselines): An implementation of the baseline solutions to the above tasks
 
 # Installation

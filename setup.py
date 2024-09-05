@@ -15,7 +15,7 @@
 import io
 from setuptools import setup, find_packages
 
-__version__ = '0.1.1.5'
+__version__ = '0.1.1.6'
 
 with io.open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
@@ -45,11 +45,11 @@ setup(
     include_package_data=True,
     install_requires=[
         'gym>=0.18.0',
-        'numpy>=1.16.4',
+        'numpy>=1.24.4',
         'Pillow>=6.2.2',
         'six>=1.12.0',
-        'pygame>=2.0.2dev2',
-        'numba>=0.55.0'
+        'pygame>=2.6.0',
+        'numba>=0.60.0'
     ],
     extras_require={},
     zip_safe=False,

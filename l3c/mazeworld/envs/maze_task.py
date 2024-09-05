@@ -86,7 +86,7 @@ class MazeTaskManager(object):
                     path_idx += 1
 
         #Prim the wall until all points are connected
-        max_cell_walls = numpy.product(cell_walls[1:-1, 1:-1].shape)
+        max_cell_walls = numpy.prod(cell_walls[1:-1, 1:-1].shape)
         while len(rev_path_dict) > 1 or (allow_loops and numpy.sum(cell_walls[1:-1, 1:-1]) > max_cell_walls * wall_density):
             wall_list = list(wall_dict.keys())
             random.shuffle(wall_list)
