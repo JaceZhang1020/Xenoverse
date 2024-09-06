@@ -260,8 +260,8 @@ def paint_agent_arrow(scr, color, offset, pos, angle, l1, l2):
     A_ARR = PI / 3
     A_A = angle - (PI - A_ARR)
     A_B = angle + (PI - A_ARR)
-    pos_S = (pos[0] + offset[0], pos[1] + offset[1])
-    pos_A = (pos[0] + l1 * numpy.cos(A_A) + offset[0], pos[1] + l1 * numpy.sin(A_A) + offset[1])
-    pos_B = (pos[0] + l1 * numpy.cos(A_B) + offset[0], pos[1] + l1 * numpy.sin(A_B) + offset[1])
-    pos_C = (pos[0] + l2 * numpy.cos(angle) + offset[0], pos[1] + l2 * numpy.sin(angle) + offset[1])
+    pos_S = (float(pos[0] + offset[0]), float(pos[1] + offset[1]))
+    pos_A = (float(pos[0] + l1 * numpy.cos(A_A) + offset[0]), float(pos[1] + l1 * numpy.sin(A_A) + offset[1]))
+    pos_B = (float(pos[0] + l1 * numpy.cos(A_B) + offset[0]), float(pos[1] + l1 * numpy.sin(A_B) + offset[1]))
+    pos_C = (float(pos[0] + l2 * numpy.cos(angle) + offset[0]), float(pos[1] + l2 * numpy.sin(angle) + offset[1]))
     pygame.draw.polygon(scr, color, (pos_S, pos_A, pos_C, pos_B))
