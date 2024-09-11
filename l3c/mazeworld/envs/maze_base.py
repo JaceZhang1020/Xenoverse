@@ -173,46 +173,21 @@ class MazeBase(object):
 
         self._obs_logo = self._font.render("Observation", 0, pygame.Color("red"))
 
-        self._screen = pygame.Surface((3 * view_size, view_size))
-        self._screen = pygame.display.set_mode((3 * view_size, view_size))
-        pygame.display.set_caption("MazeWorldRender")
-        self._surf_god = pygame.Surface((view_size, view_size))
-        self._surf_god.fill(pygame.Color("white"))
-        self._surf_lm = pygame.Surface((view_size, view_size))
-        self._surf_lm.fill(pygame.Color("grey"))
-        it = numpy.nditer(self._cell_walls, flags=["multi_index"])
-        for _ in it:
-            x,y = it.multi_index
-            landmarks_id = self._cell_landmarks[x,y]
-            if(self._cell_walls[x,y] > 0):
-                pygame.draw.rect(self._surf_god, pygame.Color("black"), (x * self._render_cell_size, y * self._render_cell_size,
-                        self._render_cell_size, self._render_cell_size), width=0)
-        logo_god = self._font.render("God View - Invisible To Agent", 0, pygame.Color("red"))
-        self._surf_god.blit(logo_god,(90, 5))
-        logo_loc = self._font.render("Local Map - Invisible To Agent", 0, pygame.Color("red"))
-        self._surf_lm.blit(logo_loc,(90, 5))
+        self._screen = pygame.Surface((2 * view_size, view_size))
+        self._screen = pygame.display.set_mode((2 * view_size, view_size))
+        self._screen.fill(pygame.Color("white"))
+        self._screen.blit(logo_loc,(view_size + 90, 5))
+        logo_map = self._font.render("Global Map (Keep It Hidden From Agent)", 0, pygame.Color("red"))
+        pygame.display.set_caption("MazeWorld Render")
 
-    def render_godview_dyna(self, scr, offset):
-        """
-        Cover landmarks with white in case it is not refreshed
-        """
-        for landmarks_id, (x,y) in enumerate(self._landmarks_coordinates):
-            if(self._landmarks_refresh_countdown[landmarks_id] > self._landmarks_refresh_interval):
-                pygame.draw.rect(scr, landmarks_color(landmarks_id), 
-                        (x * self._render_cell_size + offset[0], y * self._render_cell_size + offset[1],
-                        self._render_cell_size, self._render_cell_size), width=0)
-        if(self.task_type == "SURVIVAL"):
-            txt_life = self._font.render("Life: %f"%self._life, 0, pygame.Color("green"))
-            scr.blit(txt_life,(offset[0] + 90, offset[1] + 10))
-
-    def render_map(self, scr, offset):
+    def render_map(self):
         """
         Cover landmarks with white in case it is not refreshed
         """
         empty_range = 32
         lm_surf, _ = self.get_global_map((512, 512))
         lm_surf = pygame.transform.scale(lm_surf, (self._view_size - 2 * empty_range, self._view_size - 2 * empty_range))
-        scr.blit(lm_surf, (offset[0] + empty_range, offset[1] + empty_range))
+        self.screen.blit(lm_surf, (self._view_size + empty_range, empty_range))
 
     def render_observation(self):
         """
@@ -222,10 +197,7 @@ class MazeBase(object):
 
     def render_update(self):
         #Paint God View
-        self._screen.blit(self._surf_god, (self._view_size, 0))
-        self._screen.blit(self._surf_lm, (2 * self._view_size, 0))
-        self.render_godview_dyna(self._screen, (self._view_size, 0))
-        self.render_map(self._screen, (2 * self._view_size, 0))
+        self.render_map()
 
         #Paint Agent and Observation
         self.render_observation()

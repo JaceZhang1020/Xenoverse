@@ -8,6 +8,7 @@ import random
 from collections import namedtuple
 from numpy import random as npyrnd
 from numpy.linalg import norm
+from copy import deepcopy
 
 class MazeTaskManager(object):
 
@@ -38,6 +39,14 @@ class MazeTaskManager(object):
     def n_texts(self):
         return self.grounds.shape[0]
 
+    def sample_cmds(self, n, commands_sequence):
+        xs = numpy.random.randint(0, n, commands_sequence)
+        for i in range(xs.shape[0]):
+            if(i > 0):
+                if(xs[i] == xs[i-1]):
+                    xs[i] = (xs[i] + random.randint(1, n)) % n
+        return xs
+
     def sample_task(self,
             n=15, 
             allow_loops=True, 
@@ -53,8 +62,12 @@ class MazeTaskManager(object):
             landmarks_number=5,
             commands_sequence=200,
             wall_density=0.40,
+            seed=None,
             verbose=False):
         # Initialize the maze ...
+        if(seed is not None):
+            seed = time.time() * 1000 % 65536
+        numpy.random.seed(seed)
         assert n > 6, "Minimum required cells are 7"
         assert n % 2 != 0, "Cell Numbers can only be odd"
         assert landmarks_number > 1, "There must be at least 1 goal, thus landmarks_number must > 1"
@@ -164,7 +177,7 @@ class MazeTaskManager(object):
             def_goal_reward = goal_reward
         assert def_goal_reward > 0, "goal reward must be > 0"
 
-        commands_sequence = numpy.random.randint(0, len(landmarks), commands_sequence)
+        commands_sequence = self.sample_cmds(len(landmarks), commands_sequence)
 
         # Generate landmark rewards
         landmarks_rewards = numpy.random.rand(landmarks_number) - 0.50 + landmarks_avg_reward
@@ -201,8 +214,69 @@ class MazeTaskManager(object):
                 landmarks_refresh_interval=landmarks_refresh_interval
                 )
 
+    def resample_task(self, task, 
+            resample_cmd=True, 
+            resample_start=True, 
+            resample_landmarks_color=False, 
+            resample_landmarks=False,
+            seed=None):
+        # Randomize a start point and n landmarks while keeping the scenario still
+        if(seed is not None):
+            seed = time.time() * 1000 % 65536
+        numpy.random.seed(seed)
+        n = task.cell_walls.shape[0]
+        def idx_trans(idx):
+            return (idx // n, idx % n)
+
+        landmarks_number = len(task.landmarks_coordinates)
+        landmarks = deepcopy(task.landmarks_coordinates)
+        landmarks_rewards = task.landmarks_rewards
+        if(resample_landmarks):
+            landmarks_likelihood = numpy.random.rand(n, n) - task.cell_walls
+            idxes = numpy.argsort(landmarks_likelihood, axis=None)
+            topk_idxes = idxes[-landmarks_number-1:]
+            landmarks = [idx_trans(i) for i in topk_idxes[:-1]]
+        elif(resample_landmarks_color):
+            random.shuffle(landmarks)
+            random.shuffle(landmarks_rewards)
+
+        cell_landmarks = numpy.zeros_like(task.cell_walls) - 1
+        for i,idx in enumerate(landmarks):
+            cell_landmarks[tuple(idx)] = int(i)
+        cell_landmarks = cell_landmarks.astype(task.cell_walls.dtype)
+
+        landmarks_likelihood = numpy.random.rand(n, n) - task.cell_walls - cell_landmarks
+        idxes = numpy.argsort(landmarks_likelihood, axis=None)
+        start = idx_trans(idxes[-1])
+
+        commands_sequence = self.sample_cmds(len(landmarks), len(task.commands_sequence))
+
+        return MazeTaskManager.TaskConfig(
+                start=start,
+                cell_landmarks=cell_landmarks,
+                cell_walls=task.cell_walls,
+                cell_texts=task.cell_texts,
+                cell_size=task.cell_size,
+                step_reward=task.step_reward,
+                goal_reward=task.goal_reward,
+                wall_height=task.wall_height,
+                agent_height=task.agent_height,
+                initial_life=task.initial_life,
+                max_life=task.max_life,
+                commands_sequence=commands_sequence,
+                landmarks_coordinates=landmarks,
+                landmarks_rewards=landmarks_rewards,
+                landmarks_refresh_interval=task.landmarks_refresh_interval
+                )
+
 MAZE_TASK_MANAGER=MazeTaskManager("img")
 MazeTaskSampler = MAZE_TASK_MANAGER.sample_task
+Resampler = MAZE_TASK_MANAGER.resample_task
+
 
 if __name__=="__main__":
-    task = MazeTaskSampler(verbose=True)
+    task = MazeTaskSampler(verbose=False)
+    print(task)
+    print(Resampler(task))
+    print(Resampler(task, resample_landmarks_color=True))
+    print(Resampler(task, resample_landmarks=True))
