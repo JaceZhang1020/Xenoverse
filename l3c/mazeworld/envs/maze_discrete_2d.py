@@ -46,10 +46,7 @@ class MazeCoreDiscrete2D(MazeBase):
         pygame.draw.rect(self._screen, pygame.Color("blue"), 
                 (empty_range, empty_range,
                 self._view_size - 2 * empty_range, self._view_size - 2 * empty_range), width=1)
-        # Paint agent in god view map
-        pygame.draw.circle(self._screen, pygame.Color("gray"), 
-                ((self._agent_grid[0] + 0.5) * self._render_cell_size + self._view_size, (self._agent_grid[1] + 0.5) * self._render_cell_size),
-                int(0.40 * self._render_cell_size), width=0)
+
 
     def movement_control(self, keys):
         #Keyboard control cases

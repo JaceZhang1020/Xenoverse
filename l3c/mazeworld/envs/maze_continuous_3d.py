@@ -75,11 +75,6 @@ class MazeCoreContinuous3D(MazeBase):
         view_obs_surf = pygame.transform.scale(self._obs_surf, (self._view_size, self._view_size))
         self._screen.blit(view_obs_surf, (0, 0))
 
-        # Paint God-view
-        agent_pos = numpy.array(self._agent_loc) * self._pos_conversion
-        paint_agent_arrow(self._screen, pygame.Color("gray"), (self._view_size, 0), (agent_pos[0], agent_pos[1]), self._agent_ori, 
-                0.4 * self._pos_conversion, 0.5 * self._pos_conversion)
-
 
     def movement_control(self, keys):
         #Keyboard control cases

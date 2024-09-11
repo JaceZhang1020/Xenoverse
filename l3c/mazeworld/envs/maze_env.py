@@ -71,10 +71,16 @@ class MazeWorldEnvBase(gym.Env):
         if(self.enable_render):
             self.key_done, self.keyboard_press = self.maze_core.render_update()
 
-    def get_loc_map(self, map_range=2):
-        return self.maze_core.get_loc_map(map_rang=map_range)
+    def get_local_map(self, map_range=8, resolution=(128, 128)):
+        """
+        Returns the localized god-view map relative to the agent's standpoint
+        """
+        return self.maze_core.get_local_map(map_rang=map_range, resolution=resolution)
 
     def get_global_map(self, resolution=(128, 128)):
+        """
+        Returns the global god-view map
+        """
         return self.maze_core.get_global_map(resolution=resolution)
 
     def get_target_location(self):

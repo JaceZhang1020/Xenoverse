@@ -40,6 +40,12 @@ class MazeBase(object):
         self._initial_life = task_config.initial_life
         self._int_max = 100000000
 
+        # Texture Color Used in Map
+        self._text_color=[]
+        for text_surf in MAZE_TASK_MANAGER.grounds:
+            avg_color = numpy.mean(text_surf, axis=(0,1))
+            self._text_color.append(pygame.Color(int(avg_color[0]), int(avg_color[1]), int(avg_color[2])))
+
         assert self._agent_height < self._wall_height and self._agent_height > 0, "the agent height must be > 0 and < wall height"
         assert self._cell_walls.shape == self._cell_texts.shape, "the dimension of walls must be equal to textures"
         assert self._cell_walls.shape[0] == self._cell_walls.shape[1], "only support square shape"
@@ -103,10 +109,6 @@ class MazeBase(object):
         self._agent_ori = 0.0
         self._instant_rewards = numpy.zeros_like(self._cell_landmarks, dtype="float32")
         self._landmarks_refresh_countdown = numpy.full(self._landmarks_rewards.shape, self._int_max)
-
-        self._text_surf = []
-        for text in MAZE_TASK_MANAGER.grounds:
-            self._text_surf.append(pygame.surfarray.make_surface(text))
 
         # Initialization related to tasks
         if(self.task_type == "SURVIVAL"):
@@ -173,11 +175,15 @@ class MazeBase(object):
 
         self._obs_logo = self._font.render("Observation", 0, pygame.Color("red"))
 
-        self._screen = pygame.Surface((2 * view_size, view_size))
-        self._screen = pygame.display.set_mode((2 * view_size, view_size))
+        self._screen = pygame.Surface((3 * view_size, view_size))
+        self._screen = pygame.display.set_mode((3 * view_size, view_size))
         self._screen.fill(pygame.Color("white"))
-        self._screen.blit(logo_loc,(view_size + 90, 5))
-        logo_map = self._font.render("Global Map (Keep It Hidden From Agent)", 0, pygame.Color("red"))
+        logo_gmap = self._font.render("Global Map (Keep It Hidden From Agent)", 0, pygame.Color("red"))
+        logo_lmap = self._font.render("Local Map (Keep It Hidden From Agent)", 0, pygame.Color("red"))
+
+        self._screen.blit(logo_gmap,(view_size + 90, 5))
+        self._screen.blit(logo_lmap,(2 * view_size + 90, 5))
+
         pygame.display.set_caption("MazeWorld Render")
 
     def render_map(self):
@@ -185,9 +191,15 @@ class MazeBase(object):
         Cover landmarks with white in case it is not refreshed
         """
         empty_range = 32
-        lm_surf, _ = self.get_global_map((512, 512))
+        gm_surf, _ = self.get_global_map(resolution=(512, 512))
+        lm_surf, _ = self.get_local_map(map_range=8, resolution=(512, 512))
+
+        gm_surf = pygame.transform.scale(gm_surf, (self._view_size - 2 * empty_range, self._view_size - 2 * empty_range))
         lm_surf = pygame.transform.scale(lm_surf, (self._view_size - 2 * empty_range, self._view_size - 2 * empty_range))
-        self.screen.blit(lm_surf, (self._view_size + empty_range, empty_range))
+
+        self._screen.blit(gm_surf, (self._view_size + empty_range, empty_range))
+        self._screen.blit(lm_surf, (2.0 * self._view_size + empty_range, empty_range))
+
 
     def render_observation(self):
         """
@@ -219,10 +231,8 @@ class MazeBase(object):
 
         traj_screen = pygame.Surface((self._view_size + aw, max(self._view_size, ah)))
         traj_screen.fill(pygame.Color("white"))
-        traj_screen.blit(self._surf_god, (0, 0))
-
-        if(self.task_type == "SURVIVAL"):
-            self.render_godview_dyna(traj_screen, (0, 0))
+        surf_map, _ = self.get_global_map((self._view_size, self._view_size))
+        traj_screen.blit(surf_map, (0, 0))
 
         for i in range(len(self._agent_trajectory)-1):
             factor = i / len(self._agent_trajectory)
@@ -232,11 +242,6 @@ class MazeBase(object):
             p = [(p[0] + 0.5 + noise) * self._render_cell_size, (p[1] + 0.5 + noise) *  self._render_cell_size]
             n = [(n[0] + 0.5 + noise) * self._render_cell_size, (n[1] + 0.5 + noise) *  self._render_cell_size]
             pygame.draw.line(traj_screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 0, 255), p, n, width=2)
-
-        for landmarks_id, (x,y) in enumerate(self._landmarks_coordinates):
-            pygame.draw.rect(traj_screen, landmarks_color(landmarks_id), 
-                    (x * self._render_cell_size, y * self._render_cell_size,
-                    self._render_cell_size, self._render_cell_size), width=0)
 
         # paint some additional surfaces where necessary
         if(additional != None):
@@ -279,57 +284,62 @@ class MazeBase(object):
     def get_observation(self):
         return numpy.copy(self._observation)
 
-    def get_loc_map(self, map_range):
-        #Add the ground first
-        #Find Relative Cells
-        x_s = self._agent_grid[0] - map_range
-        x_e = self._agent_grid[0] + map_range + 1
-        y_s = self._agent_grid[1] - map_range
-        y_e = self._agent_grid[1] + map_range + 1
-        size = 2 * map_range + 1
-        i_s = 0
-        i_e = size
-        j_s = 0
-        j_e = size
-        if(x_s < 0):
-            i_s = -x_s
-            x_s = 0
-        if(x_e > self._n):
-            i_e -= x_e - self._n
-            x_e = self._n
-        if(y_s < 0):
-            j_s = -y_s
-            y_s = 0
-        if(y_e > self._n):
-            j_e -= y_e - self._n
-            y_e = self._n
-
-        # local map: 
-        #    ## =-1 for walls
-        #    ## >0 for landmarks
-        #    ## =0 for empty grounds
-        loc_map = - numpy.ones(shape=(2 * map_range + 1, 2 * map_range + 1), dtype="float32")
-        loc_map[i_s:i_e, j_s:j_e] = -self._cell_walls[x_s:x_e, y_s:y_e]
-        if(self.task_type == "SURVIVAL"):
-            loc_map[i_s:i_e, j_s:j_e] += self._cell_active_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
-        else:
-            loc_map[i_s:i_e, j_s:j_e] += self._cell_landmarks[x_s:x_e, y_s:y_e] + 1 # +1 for cell_active_landmarks in [-1, 0~n]
-
-        loc_map = numpy.expand_dims(loc_map, axis=-1)
-        wall_rgb = numpy.array([0, 0, 0], dtype="int32")
-        empty_rgb = numpy.array([255, 255, 255], dtype="int32")
-
-        color_map = ((loc_map == -1).astype("int32") * wall_rgb + 
-                (loc_map == 0).astype("int32") * empty_rgb)
-        for i in landmarks_rgb:
-            color_map += (loc_map == (i + 1)).astype("int32") * landmarks_rgb[i].astype("int32")
-
+    def get_local_map(self, map_range=8, resolution=(128, 128)):
         if("_agent_ori" in self.__dict__):
-            ori = int(2.0 * self._agent_ori / PI + 0.5) % 4 # 0, 1, 2, 3
+            cos_ori = numpy.cos(self._agent_ori)
+            sin_ori = numpy.sin(self._agent_ori)
         else:
-            ori = 0
+            cos_ori = 1.0
+            sin_ori = 0.0
+        rot_mat = numpy.array([[cos_ori, sin_ori], [-sin_ori, cos_ori]])
 
-        return numpy.rot90(color_map, k=ori, axes=(1,0)) # Need to rotate color map according to the orientation
+        surf_map = pygame.Surface(resolution)
+        surf_map.fill(pygame.Color("grey"))
+        render_x = resolution[0] / map_range
+        render_y = resolution[1] / map_range
+        render_avg = 0.5 * (render_x + render_y)
+        it = numpy.nditer(self._cell_walls, flags=["multi_index"])
+        landmark_size = 0.60
+        max_range = map_range + 0.5 * self._cell_size
+        map_grids = map_range / self._cell_size
+        delta = numpy.array([render_x, render_y])
+
+        for _ in it:
+            x,y = it.multi_index
+            p_x, p_y = self.get_cell_center([x, y])
+            d_x = p_x - self._agent_loc[0]
+            d_y = p_y - self._agent_loc[1]
+            dx = d_x / self._cell_size
+            dy = d_y / self._cell_size
+            rot_p = numpy.matmul(rot_mat, numpy.array([d_x, d_y]))
+            rot_g = rot_p / self._cell_size
+            f_x = rot_p[0]
+            f_y = rot_p[1]
+            fx = rot_g[0]
+            fy = rot_g[1]
+            if(abs(f_x) > max_range or abs(f_y) > max_range):
+                # Cell out of range, skip
+                continue
+            if(self.task_type == "SURVIVAL"):
+                landmarks_id = self._cell_active_landmarks[x,y]
+            else:
+                landmarks_id = self._cell_landmarks[x,y]
+            p1 = (delta * (numpy.matmul(rot_mat, numpy.array([dx - 0.5, dy - 0.5])) + map_grids)).tolist()
+            p2 = (delta * (numpy.matmul(rot_mat, numpy.array([dx - 0.5, dy + 0.5])) + map_grids)).tolist()
+            p3 = (delta * (numpy.matmul(rot_mat, numpy.array([dx + 0.5, dy + 0.5])) + map_grids)).tolist()
+            p4 = (delta * (numpy.matmul(rot_mat, numpy.array([dx + 0.5, dy - 0.5])) + map_grids)).tolist()
+            if(self._cell_walls[x,y] > 0):
+                pygame.draw.polygon(surf_map, self._text_color[self._cell_texts[x,y]],
+                                 [p1, p2, p3, p4])
+            else:
+                pygame.draw.polygon(surf_map, pygame.Color("white"),
+                                 [p1, p2, p3, p4])
+            if(landmarks_id > -1):
+                pygame.draw.circle(surf_map, landmarks_color(landmarks_id, opacity=0.0), 
+                                 ((fx + map_grids) * render_x, (fy + map_grids) * render_y), 0.5 * landmark_size * render_avg, 
+                                 width=0)
+        npy_map = pygame.surfarray.array3d(surf_map)
+        return surf_map, npy_map
 
     def get_global_map(self, resolution=(128, 128)):
         surf_map = pygame.Surface(resolution)
@@ -343,13 +353,16 @@ class MazeBase(object):
 
         for _ in it:
             x,y = it.multi_index
-            landmarks_id = self._cell_landmarks[x,y]
+            if(self.task_type == "SURVIVAL"):
+                landmarks_id = self._cell_active_landmarks[x,y]
+            else:
+                landmarks_id = self._cell_landmarks[x,y]
             if(self._cell_walls[x,y] > 0):
-                text_buffer = pygame.transform.scale(self._text_surf[self._cell_texts[x,y]], (render_x, render_y))
-                surf_map.blit(text_buffer,(x * render_x, y * render_y))
+                pygame.draw.rect(surf_map, self._text_color[self._cell_texts[x,y]],
+                                 (x * render_x, y * render_y, render_x, render_y))
             if(landmarks_id > -1):
-                pygame.draw.rect(surf_map, landmarks_color(landmarks_id, opacity=0.0), 
-                                 ((x + landmark_emp) * render_x, (y + landmark_emp) * render_y, landmark_size * render_x, landmark_size * render_y), 
+                pygame.draw.circle(surf_map, landmarks_color(landmarks_id, opacity=0.0), 
+                                 ((x + 0.5) * render_x, (y + 0.5) * render_y), 0.5 * landmark_size * render_avg, 
                                  width=0)
         pos_conversion = numpy.array([render_x, render_y]) / self._cell_size
         agent_pos = numpy.array(self._agent_loc) * pos_conversion
