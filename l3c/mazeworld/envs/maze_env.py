@@ -75,7 +75,7 @@ class MazeWorldEnvBase(gym.Env):
         """
         Returns the localized god-view map relative to the agent's standpoint
         """
-        return self.maze_core.get_local_map(map_rang=map_range, resolution=resolution)
+        return self.maze_core.get_local_map(map_range=map_range, resolution=resolution)
 
     def get_global_map(self, resolution=(128, 128)):
         """
