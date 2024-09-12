@@ -196,7 +196,8 @@ class MazeWorldDiscrete2D(MazeWorldEnvBase):
             render_scale=480,
             max_steps = 5000,
             task_type = "NAVIGATION",
-            visibility_2D = 1):
+            resolution = (128, 128),
+            visibility_2D = 5.0):
         super(MazeWorldDiscrete2D, self).__init__(
             "Discrete2D",
             enable_render=enable_render,
@@ -204,14 +205,13 @@ class MazeWorldDiscrete2D(MazeWorldEnvBase):
             max_steps=max_steps,
             task_type=task_type
             )
-        self.maze_core = MazeCoreDiscrete2D(visibility_2D=visibility_2D, max_steps=max_steps, task_type=task_type)
+        self.maze_core = MazeCoreDiscrete2D(visibility_2D=visibility_2D, max_steps=max_steps, task_type=task_type, resolution=resolution)
 
         # Go EAST/WEST/SOUTH/NORTH
         self.action_space = spaces.Discrete(4)
         # observation is the x, y coordinate of the grid
-        n_w = 2 * visibility_2D + 1
-        self.observation_space = spaces.Box(low=numpy.zeros(shape=(n_w, n_w, 3), dtype=numpy.float32), 
-                high=numpy.full((n_w, n_w, 3), 255, dtype=numpy.float32),
+        self.observation_space = spaces.Box(low=numpy.zeros(shape=(resolution[0], resolution[1], 3), dtype=numpy.float32), 
+                high=numpy.full((resolution[0], resolution[1], 3), 255, dtype=numpy.float32),
                 dtype=numpy.float32)
 
         self.discrete_actions=[(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)]

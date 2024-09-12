@@ -12,12 +12,13 @@ from l3c.mazeworld.envs.maze_base import MazeBase
 from .ray_caster_utils import landmarks_rgb,landmarks_color
 
 class MazeCoreDiscrete2D(MazeBase):
-    def __init__(self, visibility_2D=1, task_type="SURVIVAL", max_steps=5000):
+    def __init__(self, visibility_2D=5, task_type="SURVIVAL", resolution=(128, 128), max_steps=5000):
         super(MazeCoreDiscrete2D, self).__init__(
                 visibility_2D=visibility_2D,
                 task_type=task_type,
                 max_steps=max_steps
                 )
+        self.resolution = resolution
 
     def do_action(self, action):
         assert numpy.shape(action) == (2,)
@@ -63,16 +64,18 @@ class MazeCoreDiscrete2D(MazeBase):
         return None
 
     def update_observation(self):
-        self._observation = self.get_loc_map(self.visibility_2D)
+        obs_surf, obs_arr = self.get_local_map(map_range=self.visibility_2D, resolution=self.resolution)
 
         if(self.task_type == "SURVIVAL"):
-            # For survival task, the color of the center represents its life value
             f = max(0, int(255 - 128 * self._life))
-            self._observation[self.visibility_2D, self.visibility_2D] = numpy.asarray([255, f, f], dtype="int32")
-        elif(self.task_type == "NAVIGATION"):
-            # For navigation task, the color of the center represents the navigation target
-            self._observation[self.visibility_2D, self.visibility_2D] = landmarks_rgb[self._command]
+        else:
+            f = 0
 
+        center_size = 0.04 * (self.resolution[0] + self.resolution[1])
+        pygame.draw.circle(obs_surf, pygame.Color(255, f, f), (self.resolution[0]/2, self.resolution[1]/2), center_size)
+        self._observation = pygame.surfarray.array3d(obs_surf)
+
+        vis_grids = int(self.visibility_2D / self._cell_size)
         self._cell_exposed = numpy.zeros_like(self._cell_walls).astype(bool)
-        self._cell_exposed[(self._agent_grid[0] - self.visibility_2D) : (self._agent_grid[0] + self.visibility_2D + 1), \
-                (self._agent_grid[1] - self.visibility_2D) : (self._agent_grid[1] + self.visibility_2D + 1)] = True
+        self._cell_exposed[(self._agent_grid[0] - vis_grids) : (self._agent_grid[0] + vis_grids + 1), \
+                (self._agent_grid[1] - vis_grids) : (self._agent_grid[1] + vis_grids + 1)] = True

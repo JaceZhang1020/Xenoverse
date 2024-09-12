@@ -50,7 +50,8 @@ register(
     kwargs={
         "enable_render": True,
         "max_steps": 2000,
-        "visibility_2D": 1,
+        "visibility_2D": 5.0,
+        "resolution": (128, 128),
         "task_type": "NAVIGATION"
     }
 )
