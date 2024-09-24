@@ -117,7 +117,7 @@ Depict 3D Maze View
 cell transparent: N X N array, where -1 represents empty, and 0~9 (max = 9 represents different colors of transparency)
 """
 @njit(cache=True)
-def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts, cell_size, texture_array,
+def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts, cell_size, texture_array, ground_text,
         ceil_text, ceil_height, text_size, visibility_3D, l_focal, vision_angle_h, resolution_h, resolution_v, transparent_rgb):
     vision_screen_half_size_h = numpy.tan(vision_angle_h / 2) * l_focal
     vision_screen_half_size_v = vision_screen_half_size_h * resolution_v / resolution_h
@@ -168,14 +168,14 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             i = int(i)
             j = int(j)
             if(i < max_cell_i and i >= 0 and j < max_cell_j and j >= 0):
-                text_id = cell_texts[i,j]
+                #text_id = cell_texts[i,j]
                 d_i /= text_to_cell
                 d_j /= text_to_cell
                 d_i -= numpy.floor(d_i)
                 d_j -= numpy.floor(d_j)
-                d_i *= texture_array[text_id].shape[0]
-                d_j *= texture_array[text_id].shape[1]
-                rgb_array[d_h, d_v, :] = light_incident * (alpha * FAR_RGB + (1.0 - alpha) * texture_array[text_id][int(d_i), int(d_j)])
+                d_i *= ground_text.shape[0]
+                d_j *= ground_text.shape[1]
+                rgb_array[d_h, d_v, :] = light_incident * (alpha * FAR_RGB + (1.0 - alpha) * ground_text[int(d_i), int(d_j)])
 
     # paint ceil
     for d_v in range(resolution_v//2):
@@ -209,7 +209,7 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
                 cell_walls, cell_transparent, visibility_3D)
         for idx in exposed_cell:
             cell_exposed[idx[0],idx[1]] = 1
-        hit_transparent.sort(lambda x:x[0], reverse=True)
+        hit_transparent.sort(key=lambda x:x[0], reverse=True)
 
         alpha = min(1.0, max(2.0 * hit_dist / visibility_3D - 1.0, 0.0))
         text_id = cell_texts[hit_i,hit_j]

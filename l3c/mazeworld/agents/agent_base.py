@@ -3,7 +3,7 @@ import numpy
 from queue import Queue
 from copy import deepcopy
 from l3c.mazeworld.envs.dynamics import PI
-from l3c.mazeworld.envs.maze_env import MazeWorldDiscrete2D, MazeWorldDiscrete3D, MazeWorldContinuous3D
+from l3c.mazeworld.envs.maze_env import MazeWorldContinuous3D
 
 class AgentBase(object):
     """
@@ -16,13 +16,9 @@ class AgentBase(object):
             self.__dict__[k] = kwargs[k]
         if("maze_env" not in kwargs):
             raise Exception("Must use maze_env as arguments")
-        self.task_type = self.maze_env.maze_core.task_type
-        self.maze_type = self.maze_env.maze_type
 
         # Initialize information
         self._god_info = 1 - self.maze_env.maze_core._cell_walls + self.maze_env.maze_core._cell_landmarks
-        if(self.task_type == "SURVIVAL"):
-            self._landmarks_rewards = self.maze_env.maze_core._landmarks_rewards
         self._landmarks_coordinates = self.maze_env.maze_core._landmarks_coordinates
         self._step_reward = self.maze_env.maze_core._step_reward
         self._nx, self._ny = self._god_info.shape
@@ -44,10 +40,7 @@ class AgentBase(object):
         raise NotImplementedError()
 
     def update_common_info(self):
-        if(self.task_type == "NAVIGATION"):
-            self._command = self.maze_env.maze_core._command
-        if(self.task_type == "SURVIVAL"):
-            self._life = self.maze_env.maze_core._life
+        self._command = self.maze_env.maze_core._command
 
         # Update long and short term memory
         # Pop the eldest memory from short term memory and insert it to long term memory, but with losses.
@@ -66,12 +59,6 @@ class AgentBase(object):
         self._agent_loc = self.maze_env.maze_core._agent_loc
         self._cur_grid = deepcopy(self.maze_env.maze_core._agent_grid)
         self._cur_grid_float = deepcopy(self.maze_env.maze_core.get_loc_grid_float(self.maze_env.maze_core._agent_loc))
-        self._landmarks_cd = []
-        for cd in self.maze_env.maze_core._landmarks_refresh_countdown:
-            if(cd < self.maze_env.maze_core._landmarks_refresh_interval):
-                self._landmarks_cd.append(cd)
-            else:
-                self._landmarks_cd.append(0)
         lid = self._god_info[self._cur_grid[0], self._cur_grid[1]]
         if(lid > 0):
             self._landmarks_visit[lid - 1] = 0

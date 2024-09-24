@@ -48,21 +48,16 @@ class SmartSLAMAgent(AgentBase):
         # paint landmarks
         self._screen.blit(self._surf_god, (0, 0))
         for landmarks_id, (x,y) in enumerate(self._landmarks_coordinates):
-            if(self._landmarks_cd[landmarks_id] < 1):
-                pygame.draw.rect(self._screen, landmarks_color(landmarks_id), 
-                        (x * self._render_cell_size_x, y * self._render_cell_size_y,
-                        self._render_cell_size_x, self._render_cell_size_y), width=0)
+            pygame.draw.rect(self._screen, landmarks_color(landmarks_id), 
+                    (x * self._render_cell_size_x, y * self._render_cell_size_y,
+                    self._render_cell_size_x, self._render_cell_size_y), width=0)
+
         # paint masks (mists)
         for x in range(self._nx):
             for y in range(self._ny):
                 if(self._mask_info[x,y] < 1):
                     pygame.draw.rect(self._screen, pygame.Color("grey"), (x * self._render_cell_size_x, y * self._render_cell_size_y,
                             self._render_cell_size_x, self._render_cell_size_y), width=0)
-
-        # add texts
-        if(self.task_type is "SURVIVAL"):
-            txt_life = self._font.render("Life: %f"%self._life, 0, pygame.Color("green"))
-            self._screen.blit(txt_life,(90, 10))
 
         # paint agents
         agent_pos = [self._agent_loc[0] * self._pos_conversion_x, self._agent_loc[1] * self._pos_conversion_y]
@@ -112,13 +107,7 @@ class SmartSLAMAgent(AgentBase):
                 elif(m_type < 1):
                     cost = 10
                 elif(c_type > 0 and self._mask_info[n_x, n_y] > 0): # There is landmarks
-                    if(self.task_type == "NAVIGATION"):
-                        cost = 1
-                    elif(self.task_type == "SURVIVAL"):
-                        # Consider the extra costs of known traps
-                        cost = 1
-                        if(self._landmarks_rewards[c_type - 1] < 0.0 and self._landmarks_cd[c_type - 1] < 1):
-                            cost += self._landmarks_rewards[c_type - 1] / self._step_reward
+                    cost = 1
                 else:
                     cost = 1
                 if(self._cost_map[n_x, n_y] > self._cost_map[o_x, o_y] + cost):
@@ -127,10 +116,7 @@ class SmartSLAMAgent(AgentBase):
 
     def policy(self, observation, r):
         self.update_cost_map()
-        if(self.task_type=="SURVIVAL"):
-            return self.policy_survival(observation, r)
-        elif(self.task_type=="NAVIGATION"):
-            return self.policy_navigation(observation, r)
+        return self.policy_navigation(observation, r)
 
     def policy_survival(self, observation, r):
         path_greedy, cost = self.navigate_landmarks_survival(0.50)
@@ -157,45 +143,7 @@ class SmartSLAMAgent(AgentBase):
         return self.path_to_action(path)
 
     def path_to_action(self, path):
-        if(self.maze_type=="Continuous3D"):
-            return self.path_to_action_cont3d(path)
-        elif(self.maze_type=="Discrete3D"):
-            return self.path_to_action_disc3d(path)
-        elif(self.maze_type=="Discrete2D"):
-            return self.path_to_action_disc2d(path)
-
-    def path_to_action_disc2d(self, path):
-        if(len(path) < 2):
-            return 0#(0, 0)
-        d_x = path[1][0] - path[0][0]
-        d_y = path[1][1] - path[0][1]
-        if(d_x == -1 and d_y == 0):
-            return 1#(-1, 0)
-        if(d_x == 1 and d_y == 0):
-            return 2#(1, 0)
-        if(d_x == 0 and d_y == -1):
-            return 3#(-1, 0)
-        if(d_x == 0 and d_y == 1):
-            return 4#(-1, 0)
-
-    def path_to_action_disc3d(self, path):
-        if(len(path) < 2):
-            return 0 #(0, 0)
-        d_x = path[1][0] - path[0][0]
-        d_y = path[1][1] - path[0][1]
-        req_ori = 2.0 * math.atan2(d_y, d_x) / PI
-        deta_ori = req_ori - self._agent_ori
-        deta_ori = int(deta_ori) % 4 + deta_ori - int(deta_ori)
-        if(deta_ori > 2):
-            deta_ori -= 4
-        if(numpy.abs(deta_ori) < 0.2):
-            return 4 #(0, 1)
-        elif(deta_ori < 0):
-            return 1 #(-1, 0)
-        else:
-            return 2 #(1, 0)
-        #elif(numpy.abs(deta_ori) > 1.8 and self._god_info[path[1]] >=0 and self._mask_info[path[1]]>0):
-        #    return 3 #(0, -1)
+        return self.path_to_action_cont3d(path)
 
     def path_to_action_cont3d(self, path):
         if(len(path) < 2):

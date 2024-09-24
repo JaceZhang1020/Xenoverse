@@ -24,7 +24,7 @@ class MazeCoreContinuous3D(MazeBase):
             resolution_horizon = 320, #resolution in horizontal
             resolution_vertical = 320, #resolution in vertical
             max_steps = 5000,
-            task_type = "SURVIVAL"
+            command_in_observation = False # whether instruction / command is in observation
         ):
         super(MazeCoreContinuous3D, self).__init__(
                 collision_dist = collision_dist,
@@ -32,34 +32,36 @@ class MazeCoreContinuous3D(MazeBase):
                 fol_angle = fol_angle,
                 resolution_horizon = resolution_horizon,
                 resolution_vertical = resolution_vertical,
-                task_type = task_type,
-                max_steps = max_steps
+                max_steps = max_steps,
+                command_in_observation = command_in_observation
                 )
 
     def reset(self):
-        if(self.task_type == "SURVIVAL"):
-            #add the life bar
-            self._lifebar_start_x = 0.10 * self.resolution_vertical
-            self._lifebar_start_y = 0.10 * self.resolution_vertical
-            self._lifebar_l = 0.80 * self.resolution_vertical
-            self._lifebar_w = 0.05 * self.resolution_horizon
-        elif(self.task_type == "NAVIGATION"):
-            #add the navigation guidance bar
-            self._navbar_start_x = 0.25 * self.resolution_vertical
-            self._navbar_start_y = 0.10 * self.resolution_vertical
-            self._navbar_l = 0.50 * self.resolution_vertical
-            self._navbar_w = 0.05 * self.resolution_horizon
-        else:
-            raise Exception("No such task type: %s" % task_type)
+
+        #add the navigation guidance bar
+        self._navbar_l = 0.50 * self.resolution_vertical
+        self._navbar_w = 0.05 * self.resolution_horizon
+
+        self._navbar_start_x = 0.25 * self.resolution_vertical
+        self._navbar_start_y = 0.10 * self.resolution_vertical
+
         return super(MazeCoreContinuous3D, self).reset()
 
-    def do_action(self, action, dt=0.10):
+    def do_action(self, action, delta_t=1.0):
         turn_rate, walk_speed = action
         turn_rate = numpy.clip(turn_rate, -1, 1) * PI
         walk_speed = numpy.clip(walk_speed, -1, 1)
-        self._agent_ori, self._agent_loc = vector_move_with_collision(
-                self._agent_ori, self._agent_loc, turn_rate, walk_speed, dt, 
-                self._cell_walls, self._cell_size, self.collision_dist)
+        res_t = delta_t
+        dt_m = 0.05
+        self._collision_punish = 0.0
+        while res_t > 1.0e-3:
+            d_t = min(dt_m, res_t)
+            res_t -= d_t
+            self._agent_ori, self._agent_loc, collide = vector_move_with_collision(
+                    self._agent_ori, self._agent_loc, turn_rate, walk_speed, d_t, 
+                    self._cell_walls, self._cell_size, self.collision_dist)
+            if(collide):
+                self._collision_punish = self._collision_reward
         self._agent_grid = self.get_loc_grid(self._agent_loc)
         reward, done = self.evaluation_rule()
         self.update_observation()
@@ -97,30 +99,22 @@ class MazeCoreContinuous3D(MazeBase):
         return turn_rate, walk_speed
 
     def update_observation(self):
-        if(self.task_type == "SURVIVAL"):
-            self._observation, self._cell_exposed = maze_view(numpy.array(self._agent_loc, dtype=numpy.float32), self._agent_ori, self._agent_height, 
-                    self._cell_walls, self._cell_active_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
-                    MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
-                    self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
-            lifebar_l = self._life / self._max_life * self._lifebar_l
-            start_x = int(self._lifebar_start_x)
-            start_y = int(self._lifebar_start_y)
-            end_x = int(self._lifebar_start_x + lifebar_l)
-            end_y = int(self._lifebar_start_y + self._lifebar_w)
-            self._observation[start_x:end_x, start_y:end_y, 0] = 255
-            self._observation[start_x:end_x, start_y:end_y, 1] = 0
-            self._observation[start_x:end_x, start_y:end_y, 2] = 0
-        elif(self.task_type == "NAVIGATION"):
-            self._observation, self._cell_exposed = maze_view(numpy.array(self._agent_loc, dtype=numpy.float32), self._agent_ori, self._agent_height, 
-                    self._cell_walls, self._cell_landmarks, self._cell_texts, self._cell_size, MAZE_TASK_MANAGER.grounds,
-                    MAZE_TASK_MANAGER.ceil, self._wall_height, 1.0, self.visibility_3D, 0.20, 
-                    self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
+        self._observation, self._cell_exposed = maze_view(numpy.array(self._agent_loc, dtype=numpy.float32), self._agent_ori, self._agent_height, 
+                self._cell_walls, self._cell_landmarks, self._cell_texts, self._cell_size, 
+                MAZE_TASK_MANAGER.textlib_walls, MAZE_TASK_MANAGER.textlib_grounds[self._ground_text], MAZE_TASK_MANAGER.textlib_ceilings[self._ceiling_text],
+                self._wall_height, 1.0, self.visibility_3D, 0.20, 
+                self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
+        if(self.command_in_observation):
             start_x = int(self._navbar_start_x)
             start_y = int(self._navbar_start_y)
             end_x = int(self._navbar_start_x + self._navbar_l)
             end_y = int(self._navbar_start_y + self._navbar_w)
             self._observation[start_x:end_x, start_y:end_y] = landmarks_rgb[self._command]
+        self._command_rgb = landmarks_rgb[self._command]
         self._obs_surf = pygame.surfarray.make_surface(self._observation)
 
     def get_observation(self):
         return numpy.copy(self._observation)
+
+    def get_info(self):
+        return {"command": self._command_rgb}
