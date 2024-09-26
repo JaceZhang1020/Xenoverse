@@ -60,11 +60,11 @@ class MazeTaskManager(object):
         textlib_ceilings = []
         textlib_walls = []
         for file_name in texture_files:
-            if(file_name.find("wall") >= 0):
+            if(file_name.find("wall") == 0):
                 textlib_walls.append(pygame.surfarray.array3d(pygame.image.load(os.sep.join([texture_dir, file_name]))))
-            if(file_name.find("ground") >= 0):
+            if(file_name.find("ground") == 0):
                 textlib_grounds.append(pygame.surfarray.array3d(pygame.image.load(os.sep.join([texture_dir, file_name]))))
-            if(file_name.find("ceil") >= 0):
+            if(file_name.find("ceiling") == 0):
                 textlib_ceilings.append(pygame.surfarray.array3d(pygame.image.load(os.sep.join([texture_dir, file_name]))))
         self.textlib_walls = numpy.asarray(textlib_walls, dtype="float32")
         self.textlib_grounds = numpy.asarray(textlib_grounds, dtype="float32")
@@ -92,10 +92,7 @@ class MazeTaskManager(object):
             step_reward=-0.01,
             collision_reward=-1.0,
             goal_reward=None,
-            initial_life=1.0,
             max_life=3.0,
-            landmarks_refresh_interval=200,
-            landmarks_avg_reward=0.60,
             landmarks_number=5,
             commands_sequence=200,
             wall_density=0.40,
@@ -164,8 +161,8 @@ class MazeTaskManager(object):
     def resample_task(self, task, 
             resample_cmd=True, 
             resample_start=True, 
-            resample_landmarks_color=False, 
             resample_landmarks=False,
+            resample_landmarks_color=False,
             seed=None):
         # Randomize a start point and n landmarks while keeping the scenario still
         if(seed is not None):

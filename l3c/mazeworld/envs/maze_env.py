@@ -108,7 +108,8 @@ class MazeWorldContinuous3D(MazeWorldEnvBase):
             render_scale=480,
             max_steps = 5000,
             resolution=(320, 320),
-            visibility_3D=12.0
+            visibility_3D=12.0,
+            command_in_observation=False
             ):
         super(MazeWorldContinuous3D, self).__init__(
             "Continuous3D",
@@ -121,6 +122,7 @@ class MazeWorldContinuous3D(MazeWorldEnvBase):
                 resolution_vertical = resolution[1],
                 max_steps = max_steps,
                 visibility_3D=visibility_3D,
+                command_in_observation=command_in_observation
                 )
 
         # Turning Left/Right and go backward / forward

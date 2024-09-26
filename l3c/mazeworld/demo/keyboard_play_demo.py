@@ -10,8 +10,9 @@ if __name__=='__main__':
     parser.add_argument('--max_steps', type=int, default=1000000)
     parser.add_argument('--density', type=float, default=0.30, help="Density of the walls satisfying that all spaces are connected")
     parser.add_argument('--visibility_3D', type=float, default=12, help="3D vision range, Only valid in 3D mode")
-    parser.add_argument('--wall_height', type=float, default=3.2, help="Only valid in 3D mode")
-    parser.add_argument('--cell_size', type=float, default=2.0, help="Only valid in 3D mode")
+    parser.add_argument('--wall_height', type=float, default=3.2, help="Height of the ceiling")
+    parser.add_argument('--agent_height', type=float, default=1.6, help="height of the camera")
+    parser.add_argument('--cell_size', type=float, default=2.0, help="size of each cell")
     parser.add_argument('--step_reward', type=float, default=-0.01, help="Default rewards per-step")
     parser.add_argument('--n_landmarks', type=int, default=5, help="Number of landmarks, valid for both SURVIVAL and NAVIGATION task")
     parser.add_argument('--save_replay', type=str, default=None, help="Save the replay trajectory in file")
@@ -19,7 +20,7 @@ if __name__=='__main__':
 
     args = parser.parse_args()
 
-    maze_env = gym.make("mazeworld-v2", max_steps=args.max_steps, visibility_3D=args.visibility_3D)
+    maze_env = gym.make("mazeworld-v2", max_steps=args.max_steps, visibility_3D=args.visibility_3D, command_in_observation=True)
 
     task = MazeTaskSampler(n=args.scale, allow_loops=True, 
             wall_density=args.density,

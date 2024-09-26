@@ -116,6 +116,19 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
 Depict 3D Maze View
 cell transparent: N X N array, where -1 represents empty, and 0~9 (max = 9 represents different colors of transparency)
 """
+
+@njit(cache=True)
+def interpolate(array, i, j):
+    w,h,_ = array.shape
+    ib = int(i)
+    jb = int(j)
+    ie = (ib + 1) % w
+    je = (jb + 1) % h
+    ir = i - ib
+    jr = j - jb
+    return ((1 - ir) * (1 - jr) * array[ib, jb] + (1 - ir) * jr * array[ib, je] 
+            + ir * (1 - jr) * array[ie, jb] + ir * jr * array[ie, je])
+
 @njit(cache=True)
 def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts, cell_size, texture_array, ground_text,
         ceil_text, ceil_height, text_size, visibility_3D, l_focal, vision_angle_h, resolution_h, resolution_v, transparent_rgb):
@@ -130,7 +143,7 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
     pixel_factor = pixel_size / l_focal
     cell_exposed = numpy.zeros_like(cell_walls)
 
-    FAR_RGB = numpy.array([0, 0, 0], dtype="float32")
+    FAR_RGB = numpy.array([1, 1, 1], dtype="float32")
 
     # prepare some maths
     rgb_array = numpy.zeros(shape=(resolution_h, resolution_v, 3), dtype="int32")
@@ -152,7 +165,7 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
         # horizontal distance on screen
         v_screen = (d_v + 0.5) * pixel_size - vision_screen_half_size_v
         distance = vision_height / v_screen * l_focal
-        light_incident = v_screen / l_focal
+        light_incident = min(1.0, v_screen / l_focal)
         if(distance > visibility_3D):
             continue
 
@@ -175,13 +188,15 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
                 d_j -= numpy.floor(d_j)
                 d_i *= ground_text.shape[0]
                 d_j *= ground_text.shape[1]
-                rgb_array[d_h, d_v, :] = light_incident * (alpha * FAR_RGB + (1.0 - alpha) * ground_text[int(d_i), int(d_j)])
+                rgb_array[d_h, d_v, :] = numpy.clip(
+                        light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(ground_text, d_i, d_j)),
+                        0, 255)
 
     # paint ceil
     for d_v in range(resolution_v//2):
         v_screen = vision_screen_half_size_v - (d_v + 0.5) * pixel_size
         distance = (ceil_height - vision_height) / v_screen * l_focal
-        light_incident = v_screen / l_focal
+        light_incident = min(1.0, v_screen / l_focal)
         if(distance > visibility_3D):
             continue
 
@@ -198,7 +213,9 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             d_j = j - numpy.floor(j)
             d_i *= ceil_text.shape[0]
             d_j *= ceil_text.shape[1]
-            rgb_array[d_h, d_v, :] = light_incident * (alpha * FAR_RGB + (1.0 - alpha) * ceil_text[int(d_i), int(d_j)])
+            rgb_array[d_h, d_v, :] = numpy.clip(
+                    light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(ceil_text, d_i, d_j)),
+                    0, 255)
     
     # paint wall
     for d_h in range(resolution_h):
@@ -239,7 +256,9 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             d_j -= numpy.floor(d_j)
             d_i = int(texture_array[text_id].shape[0] * d_i)
             d_j = int(texture_array[text_id].shape[1] * d_j)
-            rgb_array[d_h, d_v, :] = light_incident * (alpha * FAR_RGB + (1.0 - alpha) * texture_array[text_id][int(d_i), int(d_j)])
+            rgb_array[d_h, d_v, :] = numpy.clip(
+                    light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(texture_array[text_id], d_i, d_j)),
+                    0, 255)
 
         # Add those transparent
         for hit_dist, hit_i, hit_j, hit_side, trans_ID in hit_transparent:
@@ -252,7 +271,9 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             v_e = min(resolution_v, int((vision_screen_half_size_v + bot_v) / pixel_size))
             alpha = min(1.0, max(2.0 * hit_dist / visibility_3D - 1.0, 0.0))
             for d_v in range(v_s, v_e):
-                rgb_array[d_h, d_v] = (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * ((1.0 - alpha) * transparent_rgb[trans_ID] + alpha * FAR_RGB)
+                rgb_array[d_h, d_v] = numpy.clip(
+                    (1.0 - transparent_factor) * rgb_array[d_h, d_v] + transparent_factor * ((1.0 - alpha) * transparent_rgb[trans_ID] + alpha * FAR_RGB),
+                    0, 255)
         
     return rgb_array, cell_exposed
 

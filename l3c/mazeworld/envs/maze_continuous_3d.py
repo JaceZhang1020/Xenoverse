@@ -10,7 +10,7 @@ from numpy import random as npyrnd
 from numpy.linalg import norm
 from l3c.mazeworld.envs.dynamics import PI, PI_2, PI_4, PI2d, vector_move_with_collision
 from l3c.mazeworld.envs.ray_caster_utils import maze_view
-from l3c.mazeworld.envs.maze_task import MAZE_TASK_MANAGER
+from l3c.mazeworld.envs.task_sampler import MAZE_TASK_MANAGER
 from l3c.mazeworld.envs.maze_base import MazeBase
 from l3c.mazeworld.envs.ray_caster_utils import landmarks_rgb, landmarks_rgb_arr, paint_agent_arrow
 
@@ -60,8 +60,8 @@ class MazeCoreContinuous3D(MazeBase):
             self._agent_ori, self._agent_loc, collide = vector_move_with_collision(
                     self._agent_ori, self._agent_loc, turn_rate, walk_speed, d_t, 
                     self._cell_walls, self._cell_size, self.collision_dist)
-            if(collide):
-                self._collision_punish = self._collision_reward
+            if(collide > 1.0e-8):
+                self._collision_punish = self._collision_reward * collide
         self._agent_grid = self.get_loc_grid(self._agent_loc)
         reward, done = self.evaluation_rule()
         self.update_observation()
@@ -86,13 +86,13 @@ class MazeCoreContinuous3D(MazeBase):
             turn_rate = 0.0
             walk_speed = 0.0
             if keys[pygame.K_LEFT]:
-                turn_rate -= 0.3
+                turn_rate -= 0.1
             if keys[pygame.K_RIGHT]:
-                turn_rate += 0.3
+                turn_rate += 0.1
             if keys[pygame.K_UP]:
-                walk_speed += 1.0
+                walk_speed += 0.5
             if keys[pygame.K_DOWN]:
-                walk_speed -= 1.0
+                walk_speed -= 0.5
         if keys[pygame.K_SPACE]:
             turn_rate = 0.0
             walk_speed = 0.0
@@ -110,6 +110,7 @@ class MazeCoreContinuous3D(MazeBase):
             end_x = int(self._navbar_start_x + self._navbar_l)
             end_y = int(self._navbar_start_y + self._navbar_w)
             self._observation[start_x:end_x, start_y:end_y] = landmarks_rgb[self._command]
+
         self._command_rgb = landmarks_rgb[self._command]
         self._obs_surf = pygame.surfarray.make_surface(self._observation)
 

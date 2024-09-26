@@ -25,5 +25,6 @@ register(
         "resolution": (256, 256),
         "max_steps": 5000,
         "visibility_3D": 12.0,
+        "command_in_observation": False
     }
 )

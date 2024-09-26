@@ -88,10 +88,7 @@ def vector_move_with_collision(ori, pos, turn_rate, walk_speed, deta_t, cell_wal
                     if(cell_walls[w_i,w_j] > 0):
                         cell_deta = exp_cell - numpy.floor(exp_cell) - numpy.array([i + 0.5, j + 0.5], dtype="float32")
                         col_f += collision_force(cell_deta, cell_size, col_dist)
-        if(numpy.sum(col_f ** 2) > 1.0e-6):
-            collision=True
-        else:
-            collision=False
         tmp_pos = col_f + exp_pos
+        collision = numpy.sum(col_f ** 2)
 
     return ori, tmp_pos, collision

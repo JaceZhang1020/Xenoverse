@@ -11,7 +11,7 @@ from numpy import random as npyrnd
 from numpy.linalg import norm
 from l3c.mazeworld.envs.ray_caster_utils import landmarks_rgb, landmarks_color
 from l3c.mazeworld.envs.dynamics import PI
-from l3c.mazeworld.envs.maze_task import MAZE_TASK_MANAGER
+from l3c.mazeworld.envs.task_sampler import MAZE_TASK_MANAGER
 from l3c.mazeworld.envs.ray_caster_utils import paint_agent_arrow
 
 class MazeBase(object):
@@ -36,7 +36,7 @@ class MazeBase(object):
         self._landmarks_coordinates = task_config["landmarks_coordinates"]
         self._commands_sequence = task_config["commands_sequence"]
         self._ground_text = task_config["ground_text"]
-        self._ceiling_text = task_config["ground_text"]
+        self._ceiling_text = task_config["ceiling_text"]
         self._int_max = 100000000
         self._commands_maxlife = 500
 
@@ -82,7 +82,7 @@ class MazeBase(object):
     def reset(self):
         self._agent_grid = numpy.copy(self._start)
         self._agent_loc = self.get_cell_center(self._start)
-        self._agent_trajectory = [numpy.copy(self._agent_grid)]
+        self._agent_trajectory = [numpy.copy(self._agent_loc)]
 
         # Record all observed cells
         self._cell_exposed = numpy.zeros_like(self._cell_walls).astype(bool)
@@ -106,7 +106,7 @@ class MazeBase(object):
     def evaluation_rule(self):
         self.steps += 1
         self._commands_exists += 1
-        self._agent_trajectory.append(numpy.copy(self._agent_grid))
+        self._agent_trajectory.append(numpy.copy(self._agent_loc))
         agent_grid_idx = tuple(self._agent_grid)
 
         reward = self._instant_rewards[agent_grid_idx] + self._step_reward
@@ -195,11 +195,10 @@ class MazeBase(object):
         for i in range(len(self._agent_trajectory)-1):
             factor = i / len(self._agent_trajectory)
             noise = (factor - 0.5) * 0.10
-            p = self._agent_trajectory[i]
-            n = self._agent_trajectory[i+1]
-            p = [(p[0] + 0.5 + noise) * self._render_cell_size, (p[1] + 0.5 + noise) *  self._render_cell_size]
-            n = [(n[0] + 0.5 + noise) * self._render_cell_size, (n[1] + 0.5 + noise) *  self._render_cell_size]
-            pygame.draw.line(traj_screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 0, 255), p, n, width=2)
+            p = numpy.array(self._agent_trajectory[i]) / self._cell_size * self._render_cell_size
+            n = numpy.array(self._agent_trajectory[i + 1]) / self._cell_size * self._render_cell_size
+            pygame.draw.line(traj_screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 0, 255), 
+                             (float(p[0]), float(p[1])), (float(n[0]), float(n[1])), width=2)
 
         # paint some additional surfaces where necessary
         if(additional != None):
