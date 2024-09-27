@@ -30,6 +30,14 @@ def DefaultActionSpace(action_idx):
     return DEFAULT_ACTION_SPACE[action_idx]
 
 @njit(cache=True)
+def angle_normalization(t):
+    while(t > PI):
+        t -= t_PI
+    while(t < -PI):
+        t += t_PI
+    return t
+
+@njit(cache=True)
 def nearest_point(pos, line_1, line_2):
     unit_ori = line_2 - line_1
     edge_norm = numpy.sqrt(numpy.sum(unit_ori * unit_ori))
@@ -82,10 +90,7 @@ def vector_move_no_collision(ori, turn_rate, walk_speed, dt):
 
     n_ori = ori + d_theta
     # Shape it to [-PI, PI]
-    while(n_ori > PI):
-        n_ori -= t_PI
-    while(n_ori < -PI):
-        n_ori += t_PI
+    n_ori = angle_normalization(n_ori)
 
     if(abs(d_theta) < 1.0e-8):
         d_x = c_theta * arc
@@ -101,9 +106,11 @@ def vector_move_no_collision(ori, turn_rate, walk_speed, dt):
 
     return n_ori, numpy.array([d_x, d_y], dtype="float64") 
 
-#@njit(cache=True)
-def search_optimal_action(ori, ds, target_ori, candidate_action, delta_t):
-    d_loc = numpy.array(ds, dtype=numpy.float64)
+@njit(cache=True)
+def search_optimal_action(ori, targ1, targ2, candidate_action, delta_t):
+    d_targ1 = numpy.array(targ1, dtype=numpy.float64)
+    if(targ2 is not None):
+        d_targ2 = numpy.array(targ2, dtype=numpy.float64)
     costs = []
     for action in candidate_action:
         tr = action[0] * PI
@@ -111,29 +118,26 @@ def search_optimal_action(ori, ds, target_ori, candidate_action, delta_t):
         n_ori, n_loc = vector_move_no_collision(ori, tr, ws, delta_t)
 
         # The position error costs
-        dist = numpy.sum((n_loc - d_loc) ** 2) 
-        cost = dist
+        dist_loss = numpy.sum((n_loc - d_targ1) ** 2)
+        dist = numpy.sqrt(dist_loss)
+        cost = dist_loss
 
         # The action costs
         cost += 1.0e-4 * (action[0] ** 2 + action[1] ** 2)
 
         # The orientation costs
-        if(dist > 0.50):
-            # In case can not match the target for far, try face the target
-            target_ori = math.atan2(d_loc[1], d_loc[0])
-        d_ori = 0
-        if(target_ori is not None):
-            # Else try prepare for the next target
-            d_ori = target_ori - n_ori
-            while(d_ori > PI):
-                d_ori -= t_PI
-            while(d_ori < -PI):
-                d_ori += t_PI
-            cost += d_ori * d_ori
-        print(action, d_ori, dist, cost)
+        targ1_ang = math.atan2(d_targ1[1], d_targ1[0])
+        delta1_ang = angle_normalization(targ1_ang - n_ori)
+        delta2_ang = delta1_ang
+        if(targ2 is not None):  # Else try prepare for the next target
+            targ2_ang = math.atan2(d_targ2[1], d_targ2[0])
+            delta2_ang = angle_normalization(targ2_ang - n_ori)
+
+        # Try to face the next target by looking ahead
+        f= min(dist/1.0, 1.0)
+        cost += delta1_ang * delta1_ang * f + delta2_ang * delta2_ang * (1 - f)
         costs.append(cost)
-    print("action", candidate_action[numpy.argmin(costs)])
-    return numpy.argmin(costs)
+    return numpy.argmin(numpy.array(costs))
 
 def vector_move_with_collision(ori, pos, turn_rate, walk_speed, delta_t, cell_walls, cell_size, col_dist):
     slide_factor = 0.20
@@ -145,7 +149,6 @@ def vector_move_with_collision(ori, pos, turn_rate, walk_speed, delta_t, cell_wa
     iteration = int(delta_t / t_prec)
     collision = 0.0
 
-    print("pre location", pos)
     for i in range(iteration + 1):
         t_res = min(delta_t - i * t_prec, t_prec)
         if(t_res < 1.0e-8):
@@ -166,6 +169,5 @@ def vector_move_with_collision(ori, pos, turn_rate, walk_speed, delta_t, cell_wa
                         col_f += collision_force(cell_deta, cell_size, col_dist)
         tmp_pos = col_f + exp_pos
         collision += numpy.sqrt(numpy.sum(col_f ** 2))
-    print("after location", tmp_pos, collision)
 
     return ori, tmp_pos, collision

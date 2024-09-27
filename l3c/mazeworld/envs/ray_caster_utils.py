@@ -1,6 +1,7 @@
 import numpy
 import pygame
 import time
+import random
 from numba import njit
 from l3c.mazeworld.envs.dynamics import PI, PI_4
 
@@ -88,6 +89,12 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
                     hit_dist = 1.0e+6
                     break
             else:
+                if(hit_dist <= visibility_3D * 0.60):
+                    exposed_cell.append([hit_i, hit_j]) # The cell becomes seen to the agent
+                if(cell_walls[hit_i, hit_j] > 0):
+                    hit_side = 0
+                    break
+
                 exposed_cell.append([hit_i, hit_j]) # The cell becomes seen to the agent
                 if(cell_walls[hit_i, hit_j] > 0):
                     hit_side = 0
@@ -104,7 +111,8 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
                     hit_dist = 1.0e+6
                     break
             else:
-                exposed_cell.append([hit_i, hit_j]) # The cell becomes seen to the agent
+                if(hit_dist <= visibility_3D * 0.60):
+                    exposed_cell.append([hit_i, hit_j]) # The cell becomes seen to the agent
                 if(cell_walls[hit_i, hit_j] > 0):
                     hit_side = 1
                     break
@@ -118,16 +126,23 @@ cell transparent: N X N array, where -1 represents empty, and 0~9 (max = 9 repre
 """
 
 @njit(cache=True)
-def interpolate(array, i, j):
+def interpolate(array, i, j, d, px, py):
+    d2 = max(d ** 2, 1.0e-8)
     w,h,_ = array.shape
     ib = int(i)
     jb = int(j)
-    ie = (ib + 1) % w
-    je = (jb + 1) % h
-    ir = i - ib
-    jr = j - jb
-    return ((1 - ir) * (1 - jr) * array[ib, jb] + (1 - ir) * jr * array[ib, je] 
-            + ir * (1 - jr) * array[ie, jb] + ir * jr * array[ie, je])
+    sum_wht = 0.0
+    sum_r = numpy.zeros(shape=(3), dtype="float32")
+
+    for x in range(ib-1, ib+3):
+        for y in range(jb-1, jb+3):
+            dist = (((x - i) * px) ** 2 + ((y - j) * py) ** 2)
+            wht = max(0.01, min(1.0 - 10 * dist / d2, 1.0))
+            sum_wht += wht
+            xv = x % w
+            yv = y % h
+            sum_r += wht * array[xv, yv]
+    return sum_r / sum_wht
 
 @njit(cache=True)
 def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts, cell_size, texture_array, ground_text,
@@ -137,13 +152,19 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
     pixel_size = 2.0 * vision_screen_half_size_h / resolution_h
     s_ori = numpy.sin(ori)
     c_ori = numpy.cos(ori)
-    text_to_cell = text_size / cell_size
     max_cell_i = cell_walls.shape[0]
     max_cell_j = cell_walls.shape[1]
     pixel_factor = pixel_size / l_focal
     cell_exposed = numpy.zeros_like(cell_walls)
+    percell_textnum = cell_size / text_size
+    height_texts = ceil_height / text_size
 
     FAR_RGB = numpy.array([1, 1, 1], dtype="float32")
+
+    textg_pixel_size_x = text_size / ground_text.shape[0]
+    textg_pixel_size_y = text_size / ground_text.shape[1]
+    textc_pixel_size_x = text_size / ceil_text.shape[0]
+    textc_pixel_size_y = text_size / ceil_text.shape[1]
 
     # prepare some maths
     rgb_array = numpy.zeros(shape=(resolution_h, resolution_v, 3), dtype="int32")
@@ -180,16 +201,18 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             d_j = j - numpy.floor(j)
             i = int(i)
             j = int(j)
+            eff_ps = eff_distance * pixel_size / l_focal
+
             if(i < max_cell_i and i >= 0 and j < max_cell_j and j >= 0):
                 #text_id = cell_texts[i,j]
-                d_i /= text_to_cell
-                d_j /= text_to_cell
+                d_i *= percell_textnum
+                d_j *= percell_textnum
                 d_i -= numpy.floor(d_i)
                 d_j -= numpy.floor(d_j)
                 d_i *= ground_text.shape[0]
                 d_j *= ground_text.shape[1]
                 rgb_array[d_h, d_v, :] = numpy.clip(
-                        light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(ground_text, d_i, d_j)),
+                        light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(ground_text, d_i, d_j, eff_ps, textg_pixel_size_x, textg_pixel_size_y)),
                         0, 255)
 
     # paint ceil
@@ -205,16 +228,24 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
             alpha = min(1.0, max(2.0 * eff_distance / visibility_3D - 1.0, 0.0))
             hit_x = eff_distance * cos_abs_hp_array[d_h] + pos[0]
             hit_y = eff_distance * sin_abs_hp_array[d_h] + pos[1]
-            t_i = int(hit_x / cell_size)
-            t_j = int(hit_y / cell_size)
-            i = (hit_x / text_size)
-            j = (hit_y / text_size)
+            i = (hit_x / cell_size)
+            j = (hit_y / cell_size)
             d_i = i - numpy.floor(i)
             d_j = j - numpy.floor(j)
-            d_i *= ceil_text.shape[0]
-            d_j *= ceil_text.shape[1]
-            rgb_array[d_h, d_v, :] = numpy.clip(
-                    light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(ceil_text, d_i, d_j)),
+            i = int(i)
+            j = int(j)
+            eff_ps = eff_distance * pixel_size / l_focal
+
+            if(i < max_cell_i and i >= 0 and j < max_cell_j and j >= 0):
+                #text_id = cell_texts[i,j]
+                d_i *= percell_textnum
+                d_j *= percell_textnum
+                d_i -= numpy.floor(d_i)
+                d_j -= numpy.floor(d_j)
+                d_i *= ceil_text.shape[0]
+                d_j *= ceil_text.shape[1]
+                rgb_array[d_h, d_v, :] = numpy.clip(
+                    light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(ceil_text, d_i, d_j, eff_ps, textc_pixel_size_x, textc_pixel_size_y)),
                     0, 255)
     
     # paint wall
@@ -225,7 +256,8 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
                 pos, i, j, max_cell_i, cell_size, cos_abs_hp_array[d_h], sin_abs_hp_array[d_h], 
                 cell_walls, cell_transparent, visibility_3D)
         for idx in exposed_cell:
-            cell_exposed[idx[0],idx[1]] = 1
+            if(random.random() < 0.05):
+                cell_exposed[idx[0],idx[1]] = 1
         hit_transparent.sort(key=lambda x:x[0], reverse=True)
 
         alpha = min(1.0, max(2.0 * hit_dist / visibility_3D - 1.0, 0.0))
@@ -255,14 +287,19 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
 
         for d_v in range(v_s, v_e):
             local_v = (vision_screen_half_size_v - (d_v + 0.5) * pixel_size) * ratio + vision_height
-            d_i = local_h / text_size
+            d_i = local_h * percell_textnum
             d_j = local_v / text_size
             d_i -= numpy.floor(d_i)
             d_j -= numpy.floor(d_j)
             d_i = int(texture_array[text_id].shape[0] * d_i)
             d_j = int(texture_array[text_id].shape[1] * d_j)
+            text_pixel_size_x = text_size / texture_array[text_id].shape[0]
+            text_pixel_size_y = text_size / texture_array[text_id].shape[1]
+
+            eff_ps = eff_distance * pixel_size / l_focal
+
             rgb_array[d_h, d_v, :] = numpy.clip(
-                    light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(texture_array[text_id], d_i, d_j)),
+                    light_incident * (alpha * FAR_RGB + (1.0 - alpha) * interpolate(texture_array[text_id], d_i, d_j, eff_ps, text_pixel_size_x, text_pixel_size_y)),
                     0, 255)
 
         # Add those transparent

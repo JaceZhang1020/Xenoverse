@@ -52,7 +52,7 @@ def genmaze_largeroom(n, room_number, room_size=(2,4)):
     rects = []
 
     # TRY PUT 6 RECTANGLES
-    max_try = 100
+    max_try = 5
     for _ in range(room_number):
         rect = Rectangle()
         for _ in range(max_try):
@@ -73,7 +73,7 @@ def genmaze_largeroom(n, room_number, room_size=(2,4)):
 
 def genmaze_by_primwall(n, allow_loops=True, wall_density=0.30):
     # Dig big rooms in the region
-    cell_occs, cell_walls, rects = genmaze_largeroom(n, random.randint(0, n**2//9))
+    cell_occs, cell_walls, rects = genmaze_largeroom(n, random.randint(0, (n - 2) ** 2 // 16))
 
     # Dig the initial holes
     for i in range(1, n, 2):
