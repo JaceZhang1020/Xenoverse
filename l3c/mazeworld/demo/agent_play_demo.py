@@ -5,6 +5,7 @@ import time
 import l3c.mazeworld
 from l3c.mazeworld import MazeTaskSampler
 from l3c.mazeworld.agents import SmartSLAMAgent
+from l3c.mazeworld.envs import DefaultActionSpace
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Playing the maze world demo with your keyboard')
@@ -45,7 +46,7 @@ if __name__=='__main__':
 
     while not done:
         action = agent.step(observation, reward)
-        observation, reward, done, _ = maze_env.step(action)
+        observation, reward, done, _ = maze_env.step(DefaultActionSpace(action))
         sum_reward += reward
         if(args.verbose):
             print("Instant r = %.2f, Accumulate r = %.2f" % (reward, sum_reward))

@@ -51,20 +51,16 @@ class MazeCoreContinuous3D(MazeBase):
         turn_rate, walk_speed = action
         turn_rate = numpy.clip(turn_rate, -1, 1) * PI
         walk_speed = numpy.clip(walk_speed, -1, 1)
-        res_t = delta_t
-        dt_m = 0.05
-        self._collision_punish = 0.0
-        while res_t > 1.0e-3:
-            d_t = min(dt_m, res_t)
-            res_t -= d_t
-            self._agent_ori, self._agent_loc, collide = vector_move_with_collision(
-                    self._agent_ori, self._agent_loc, turn_rate, walk_speed, d_t, 
-                    self._cell_walls, self._cell_size, self.collision_dist)
-            if(collide > 1.0e-8):
-                self._collision_punish = self._collision_reward * collide
+
+        self._agent_ori, self._agent_loc, collide = vector_move_with_collision(
+                self._agent_ori, self._agent_loc, turn_rate, walk_speed, delta_t, 
+                self._cell_walls, self._cell_size, self.collision_dist)
+        self._collision_punish = self._collision_reward * collide
+
         self._agent_grid = self.get_loc_grid(self._agent_loc)
         reward, done = self.evaluation_rule()
         self.update_observation()
+
         return reward, done
 
     def render_init(self, view_size):

@@ -5,15 +5,18 @@ from .agent_base import AgentBase
 from queue import Queue
 from pygame import font
 from l3c.mazeworld.envs.dynamics import PI
+from l3c.mazeworld.envs.utils import conv2d_numpy
+from l3c.mazeworld.envs.dynamics import search_optimal_action
 from l3c.mazeworld.envs.ray_caster_utils import landmarks_color, landmarks_rgb, landmarks_rgb_arr, paint_agent_arrow
 
-def aggregate_unexplorations(mask_info):
-    ret_mask = mask_info.astype(numpy.int32)
-    nx, ny = mask_info.shape
-    for dx,dy in [(1, 1), (1, 0), (0, 1), (1, 2), (2, 1), (2, 2), (0, 2), (2, 0)]:
-        ret_mask[dx:,dy:] = ret_mask[dx:,dy:] + mask_info[:nx-dx, :ny-dy]
-        ret_mask[:nx-dx, :ny-dy] = ret_mask[:nx-dx, :ny-dy] + mask_info[dx:, dy:]
-    return ret_mask * mask_info
+def convolve_exploration(exp_wht):
+    """
+    Add weight to the cells where its surroundings are not exposed (mask_info = 0)
+    """
+    kernel = numpy.ones((5,5))
+    kernel[2, 2] = 1000
+    res = conv2d_numpy(exp_wht, kernel, padding=2)
+    return res
 
 class SmartSLAMAgent(AgentBase):
     def render_init(self, view_size=(640, 640)):
@@ -61,7 +64,7 @@ class SmartSLAMAgent(AgentBase):
 
         # paint agents
         agent_pos = [self._agent_loc[0] * self._pos_conversion_x, self._agent_loc[1] * self._pos_conversion_y]
-        paint_agent_arrow(self._screen, pygame.Color("gray"), (0, 0), (agent_pos[0], agent_pos[1]), 0.5 * PI * self._agent_ori, 
+        paint_agent_arrow(self._screen, pygame.Color("gray"), (0, 0), (agent_pos[0], agent_pos[1]), self._agent_ori, 
                 0.4 * self._pos_conversion_x, 0.5 * self._pos_conversion_x)
 
         # paint target trajectory
@@ -72,6 +75,12 @@ class SmartSLAMAgent(AgentBase):
             p = [(p[0] + 0.5) * self._render_cell_size_x, (p[1] + 0.5) *  self._render_cell_size_y]
             n = [(n[0] + 0.5) * self._render_cell_size_x, (n[1] + 0.5) *  self._render_cell_size_y]
             pygame.draw.line(self._screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 128, 255), p, n, width=1)
+
+        p = self._path[0]
+        n = self._cur_grid_float
+        p = [int((p[0] + 0.5) * self._render_cell_size_x), int((p[1] + 0.5) *  self._render_cell_size_y)]
+        n = [int(n[0] * self._render_cell_size_x), int(n[1] *  self._render_cell_size_y)]
+        pygame.draw.line(self._screen, pygame.Color(255, 0, 128, 255), p, n, width=1)
 
         # paint observation
         obs_surf = pygame.surfarray.make_surface(observation)
@@ -91,46 +100,42 @@ class SmartSLAMAgent(AgentBase):
         # In survival mode, consider the loss brought by rewards
         self._cost_map = 1e+6 * numpy.ones_like(self._god_info)
         refresh_list = Queue()
-        refresh_list.put((self._cur_grid[0], self._cur_grid[1]))
-        self._cost_map[self._cur_grid[0], self._cur_grid[1]] = 0
+        cx,cy = self._cur_grid
+        for dx,dy in self.valid_neighbors(center=(cx, cy), self_included=True, mask_included=False):
+            i = dx + cx
+            j = dy + cy
+            # Initialize the neiboring costs
+            deta = numpy.asarray([self._cur_grid_float[0] - (i + 0.5), self._cur_grid_float[0] - (i + 0.5)])
+            dist = numpy.sqrt(numpy.sum(deta ** 2))
+            ori = 1.0 - numpy.sum(deta / (dist + 1.0e-3) * numpy.array([numpy.cos(self._agent_ori), numpy.sin(self._agent_ori)]))
+            ori_cost = 20.0 * ori * min(dist, 0.01)
+            self._cost_map[i, j] = dist + ori * 2.0 * min(dist, 0.20)
+            refresh_list.put((i, j))
+
         while not refresh_list.empty():
             o_x, o_y = refresh_list.get()
-            for d_x, d_y in self.neighbors:
+            for d_x, d_y in self.valid_neighbors(center=(o_x, o_y), self_included=False, mask_included=True):
                 n_x = o_x + d_x
                 n_y = o_y + d_y
                 if(n_x >= self._nx or n_x < 0 or n_y >= self._ny or n_y < 0):
                     continue
                 c_type = self._god_info[n_x, n_y]
                 m_type = self._mask_info[n_x, n_y]
+                dist_cost = numpy.sqrt(d_x ** 2 + d_y ** 2)
                 if(c_type < 0 and m_type > 0):
                     continue
                 elif(m_type < 1):
-                    cost = 10
-                elif(c_type > 0 and self._mask_info[n_x, n_y] > 0): # There is landmarks
-                    cost = 1
+                    cost = 10 + dist_cost
                 else:
-                    cost = 1
+                    cost = dist_cost
                 if(self._cost_map[n_x, n_y] > self._cost_map[o_x, o_y] + cost):
                     self._cost_map[n_x, n_y] = self._cost_map[o_x, o_y] + cost
                     refresh_list.put((n_x, n_y))
 
     def policy(self, observation, r):
+        import time
+        time.sleep(1.0)
         self.update_cost_map()
-        return self.policy_navigation(observation, r)
-
-    def policy_survival(self, observation, r):
-        path_greedy, cost = self.navigate_landmarks_survival(0.50)
-        path = path_greedy
-        if(path is None or cost > -0.01):
-            path_exp = self.exploration()
-            if(path_exp is not None):
-                path = path_exp
-            elif(path is None):
-                path = self._cur_grid
-        self._path = path
-        return self.path_to_action(path)
-
-    def policy_navigation(self, observation, r):
         path_greedy = self.navigate_landmarks_navigate(self._command)
         path = path_greedy
         if(path_greedy is None):
@@ -138,50 +143,44 @@ class SmartSLAMAgent(AgentBase):
             if(path_exp is not None):
                 path = path_exp
             else:
-                path = self._cur_grid
+                print("[WARNING] Unexpected failure in exploration, might cause unexpected stop")
+                path = [self._cur_grid]
         self._path = path
         return self.path_to_action(path)
 
     def path_to_action(self, path):
-        return self.path_to_action_cont3d(path)
+        if(len(path) < 0):
+            raise Exception("Unexpected Error in retrieving path for the current agent")
+        d_x = path[0][0] + 0.5 - self._cur_grid_float[0]
+        d_y = path[0][1] + 0.5 - self._cur_grid_float[1]
+        deta_s = numpy.sqrt(d_x ** 2 + d_y ** 2)
+        if(len(path) > 1):
+            target_ori = math.atan2(d_y, d_x)
+        else:
+            target_ori = None
 
-    def path_to_action_cont3d(self, path):
-        if(len(path) < 2):
-            d_x = path[0][0] + 0.5 - self._cur_grid_float[0]
-            d_y = path[0][1] + 0.5 - self._cur_grid_float[1]
-            deta_s = numpy.sqrt(d_x ** 2 + d_y ** 2)
-            if(deta_s < 0.20):
-                return (0, 0)
-        else:
-            d_x = path[1][0] + 0.5 - self._cur_grid_float[0]
-            d_y = path[1][1] + 0.5 - self._cur_grid_float[1]
-            deta_s = numpy.sqrt(d_x ** 2 + d_y ** 2)
-        req_ori = 2.0 * math.atan2(d_y, d_x) / PI
-        deta_ori = req_ori - self._agent_ori
-        deta_ori = int(deta_ori) % 4 + deta_ori - int(deta_ori)
-        if(deta_ori > 2):
-            deta_ori -= 4
-        if(numpy.abs(deta_ori) < 0.50):
-            spd = min(deta_s, 1.0)
-        elif(numpy.abs(deta_ori) > 1.95):
-            spd = - min(deta_s, 1.0)
-        else:
-            spd = 0.0
-        if(deta_ori < 0):
-            turn = - min(numpy.abs(deta_ori), 1.0)
-        else:
-            turn = min(numpy.abs(deta_ori), 1.0)
-        return (turn, spd)
+        return search_optimal_action(self._agent_ori, (d_x, d_y), target_ori, self.action_space, 1.0)
 
     def retrieve_path(self, cost_map, goal_idx):
-        path = [goal_idx]
+        path = [(int(goal_idx[0]), int(goal_idx[1]))]
         cost = cost_map[goal_idx]
         sel_x, sel_y = goal_idx
         iteration = 0
-        while sel_x != self._cur_grid[0] or sel_y != self._cur_grid[1] :
+        eff_targets = []
+        for dx, dy in self.valid_neighbors(self_included=True, mask_included=False):
+            eff_targets.append((self._cur_grid[0] + dx, self._cur_grid[1] + dy))
+        while sel_x != self._cur_grid[0] or sel_y != self._cur_grid[1]:
+            flag = False
+            for t_x, t_y in eff_targets:
+                if(sel_x == t_x and sel_y == t_y):
+                    flag = True
+            if(flag):
+                break
             iteration += 1
             min_cost = cost
-            for d_x, d_y in self.neighbors:
+            min_x = -1
+            min_y = -1
+            for d_x, d_y in self.valid_neighbors(center=(sel_x, sel_y)):
                 n_x = sel_x + d_x
                 n_y = sel_y + d_y
                 if(n_x < 0 or n_x > self._nx - 1 or n_y < 0 or n_y > self._ny - 1):
@@ -189,18 +188,35 @@ class SmartSLAMAgent(AgentBase):
                 if(cost_map[n_x, n_y] > 1e+4):
                     continue
                 if(cost_map[n_x, n_y] < min_cost):
+                    # Check whether the location is in shortest path
+                    # if not, directly link the agent to the target cell
                     min_cost = cost_map[n_x, n_y]
-                    sel_x = n_x
-                    sel_y = n_y
-                    path.insert(0, (n_x, n_y))
-            cost=cost_map[sel_x, sel_y]
+                    min_x = int(n_x)
+                    min_y = int(n_y)
+            if(min_x > -1): 
+                sel_x, sel_y = (min_x, min_y)
+                path.insert(0, (sel_x, sel_y))
+                cost=cost_map[sel_x, sel_y]
+            else:
+                print("[WARNING] Unexpected error in path retrieving")
+                break
+
+        if(len(path) > 2):
+            d_x = path[0][0] + 0.5 - self._cur_grid_float[0]
+            d_y = path[0][1] + 0.5 - self._cur_grid_float[1]
+            deta_s = numpy.sqrt(d_x ** 2 + d_y ** 2)
+            d_x2 = path[1][0] + 0.5 - self._cur_grid_float[0]
+            d_y2 = path[1][1] + 0.5 - self._cur_grid_float[1]
+            deta_s2 = numpy.sqrt(d_x2 ** 2 + d_y2 ** 2)
+            if(deta_s + cost_map[*path[0]] > deta_s2 + cost_map[*path[1]]):
+                del path[0]
         return path
 
-
     def exploration(self):
-        aggr = aggregate_unexplorations(self._mask_info)
-        utility = self._cost_map + 10000 * self._mask_info - 3 * aggr
-        if(numpy.argmin(utility) >= 10000):
+        explore_wht = 1 - numpy.array(self._mask_info, dtype=numpy.int32)
+        explore_wht = convolve_exploration(explore_wht)
+        utility = self._cost_map - explore_wht
+        if(numpy.min(utility) >= 0):
             return None 
         target_idx = numpy.unravel_index(numpy.argmin(utility), utility.shape)
         return self.retrieve_path(self._cost_map, target_idx)
@@ -213,14 +229,3 @@ class SmartSLAMAgent(AgentBase):
             else:
                 return self.retrieve_path(self._cost_map, tuple(idx))
         return None
-
-    def navigate_landmarks_survival(self, r_exp):
-        cost_map = numpy.copy(self._cost_map)
-        for i,idx in enumerate(self._landmarks_coordinates):
-            if(i not in self._landmarks_visit and self._mask_info[idx] > 0):
-                cost_map[idx] += r_exp / self._step_reward
-            elif(self._landmarks_rewards[i] > 0.0 and self._mask_info[idx] > 0):
-                cost_map[idx] += self._landmarks_cd[i] + self._landmarks_rewards[i] / self._step_reward
-        target_idx = numpy.unravel_index(numpy.argmin(cost_map), cost_map.shape)
-        return self.retrieve_path(self._cost_map, target_idx), cost_map[target_idx]
-

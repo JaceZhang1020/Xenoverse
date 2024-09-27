@@ -2,8 +2,9 @@ import sys
 import numpy
 from queue import Queue
 from copy import deepcopy
-from l3c.mazeworld.envs.dynamics import PI
+from l3c.mazeworld.envs.dynamics import PI, DEFAULT_ACTION_SPACE
 from l3c.mazeworld.envs.maze_env import MazeWorldContinuous3D
+
 
 class AgentBase(object):
     """
@@ -18,13 +19,17 @@ class AgentBase(object):
             raise Exception("Must use maze_env as arguments")
 
         # Initialize information
+        self._cell_size = self.maze_env.maze_core._cell_size
         self._god_info = 1 - self.maze_env.maze_core._cell_walls + self.maze_env.maze_core._cell_landmarks
         self._landmarks_coordinates = self.maze_env.maze_core._landmarks_coordinates
         self._step_reward = self.maze_env.maze_core._step_reward
         self._nx, self._ny = self._god_info.shape
-        self.neighbors = [(-1, 0), (1, 0), (0, 1), (0, -1)]
+        self.neighbors = [(-1, 0), (1, 0), (0, 1), (0, -1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
         self._landmarks_visit = dict()
         self._short_term_memory = list()
+
+        if("action_space" not in self.__dict__):
+            self.action_space = DEFAULT_ACTION_SPACE
 
         if("short_term_memory_size" not in kwargs):
             self.short_term_memory_size = 3
@@ -38,6 +43,31 @@ class AgentBase(object):
 
     def render_init(self):
         raise NotImplementedError()
+
+    def valid_neighbors(self, center=None, self_included=False, mask_included=True):
+        if(center is None):
+            cx, cy = self.maze_env.maze_core._agent_grid
+        else:
+            cx, cy = center
+        valid_neighbors = []
+        if(self_included):
+            valid_neighbors.append((0, 0))
+        for dx, dy in self.neighbors:
+            nx = cx + dx
+            ny = cy + dy
+            if(nx < 0 or nx >= self._nx or ny < 0 or ny >= self._ny):
+                continue
+            if(not self._mask_info[nx, ny] and not mask_included):
+                continue
+            if(self._god_info[nx, ny] < 0 and self._mask_info[nx, ny]):
+                continue
+            if(dx * dy == 0):
+                valid_neighbors.append((dx, dy))
+            else:
+                if(self._god_info[nx, cy] > -1 and self._god_info[cx, ny] > -1 
+                   and self._mask_info[nx, cy] and self._mask_info[cx, ny]):
+                    valid_neighbors.append((dx, dy))
+        return valid_neighbors
 
     def update_common_info(self):
         self._command = self.maze_env.maze_core._command
@@ -55,7 +85,7 @@ class AgentBase(object):
         for i in range(len(self._short_term_memory)):
             self._mask_info = numpy.logical_or(self._mask_info, self._short_term_memory[i])
         
-        self._agent_ori = (2.0 * self.maze_env.maze_core._agent_ori / PI)
+        self._agent_ori = self.maze_env.maze_core._agent_ori
         self._agent_loc = self.maze_env.maze_core._agent_loc
         self._cur_grid = deepcopy(self.maze_env.maze_core._agent_grid)
         self._cur_grid_float = deepcopy(self.maze_env.maze_core.get_loc_grid_float(self.maze_env.maze_core._agent_loc))

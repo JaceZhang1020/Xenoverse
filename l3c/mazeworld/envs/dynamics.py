@@ -1,4 +1,5 @@
 import numpy
+import math
 from numba import njit
 
 PI_4 = 0.7853981
@@ -7,11 +8,26 @@ PI = 3.1415926
 t_PI = 6.2831852
 PI2d = 57.29578
 
-OFFSET_10 = numpy.asarray([0.5, 0.5], dtype="float32")
-OFFSET_01 = numpy.asarray([-0.5, 0.5], dtype="float32")
-OFFSET_m0 = numpy.asarray([-0.5, -0.5], dtype="float32")
-OFFSET_0m = numpy.asarray([0.5, -0.5], dtype="float32")
+OFFSET_10 = numpy.asarray([0.5, 0.5], dtype="float64")
+OFFSET_01 = numpy.asarray([-0.5, 0.5], dtype="float64")
+OFFSET_m0 = numpy.asarray([-0.5, -0.5], dtype="float64")
+OFFSET_0m = numpy.asarray([0.5, -0.5], dtype="float64")
 
+DEFAULT_ACTION_SPACE = [(0.0, 0.0), 
+                        (0.05, 0.0), (-0.05, 0.0),
+                        (0.1, 0.0), (-0.1, 0.0),
+                        (0.2, 0.0), (-0.2, 0.0),
+                        (0.35, 0.0), (-0.35, 0.0),
+                        (0.5, 0.0), (-0.5, 0.0), 
+                        (0.0, 0.25), (0.0, 1.0), (0.0, -0.25),
+                        (0.05, 0.25), (0.05, 1.0), 
+                        (-0.05, 0.25), (-0.05, 1.0), 
+                        (0.10, 0.25), (0.10, 1.0), 
+                        (-0.10, 0.25), (-0.10, 1.0), 
+                        ]
+
+def DefaultActionSpace(action_idx):
+    return DEFAULT_ACTION_SPACE[action_idx]
 
 @njit(cache=True)
 def nearest_point(pos, line_1, line_2):
@@ -33,9 +49,9 @@ def collision_force(dist_vec, cell_size, col_dist):
     dist = float(numpy.sqrt(numpy.sum(dist_vec * dist_vec)))
     eff_col_dist = col_dist / cell_size
     if(dist > 0.708 + eff_col_dist):
-        return numpy.array([0.0, 0.0], dtype="float32")
+        return numpy.array([0.0, 0.0], dtype="float64")
     if(abs(dist_vec[0]) < 0.5 and abs(dist_vec[1]) < 0.5):
-        return numpy.float32(0.50 / max(dist, 1.0e-6) * (0.708 + eff_col_dist - dist) * cell_size) * dist_vec
+        return numpy.float64(0.50 / max(dist, 1.0e-6) * (0.708 + eff_col_dist - dist) * cell_size) * dist_vec
     x_pos = (dist_vec[0] + dist_vec[1] > 0)
     y_pos = (dist_vec[1] - dist_vec[0] > 0)
     if(x_pos and y_pos):
@@ -48,38 +64,98 @@ def collision_force(dist_vec, cell_size, col_dist):
         dist, np = nearest_point(dist_vec, OFFSET_0m, OFFSET_10)
 
     if(eff_col_dist < dist):
-        return numpy.array([0.0, 0.0], dtype="float32")
+        return numpy.array([0.0, 0.0], dtype="float64")
     else:
         ori = dist_vec - np
         ori_norm = numpy.sqrt(numpy.sum(ori * ori))
         ori *= 1.0 / max(1.0e-6, ori_norm)
-        return numpy.float32(0.50 * (eff_col_dist - dist) * cell_size) * ori
+        return (0.50 * (eff_col_dist - dist) * cell_size) * ori
 
 @njit(cache=True)
-def vector_move(ori, turn_rate, walk_speed, dt):
-    fin_ori = ori + turn_rate * dt
-    offset_ori = 0.5 * (fin_ori + ori)
-    offset = walk_speed * dt
-    d_x = numpy.cos(offset_ori) * offset
-    d_y = numpy.sin(offset_ori) * offset
-    while(fin_ori > t_PI):
-        fin_ori -= t_PI
-    while(fin_ori < 0):
-        fin_ori += t_PI
-    return fin_ori, numpy.asarray([d_x, d_y], dtype="float32")
+def vector_move_no_collision(ori, turn_rate, walk_speed, dt):
+    d_theta = turn_rate * dt
+    arc = walk_speed * dt
+    c_theta = numpy.cos(ori)
+    s_theta = numpy.sin(ori)
+    c_dt = numpy.cos(0.5 * d_theta)
+    s_dt = numpy.sin(0.5 * d_theta)
 
-def vector_move_with_collision(ori, pos, turn_rate, walk_speed, deta_t, cell_walls, cell_size, col_dist):
+    n_ori = ori + d_theta
+    # Shape it to [-PI, PI]
+    while(n_ori > PI):
+        n_ori -= t_PI
+    while(n_ori < -PI):
+        n_ori += t_PI
+
+    if(abs(d_theta) < 1.0e-8):
+        d_x = c_theta * arc
+        d_y = s_theta * arc
+    else:
+        # Turning Radius
+        rad = walk_speed / turn_rate
+        offset = 2.0 * s_dt * rad
+        c_n = c_theta * c_dt - s_theta * s_dt
+        s_n = c_theta * s_dt + s_theta * c_dt
+        d_x = c_n * offset
+        d_y = s_n * offset
+
+    return n_ori, numpy.array([d_x, d_y], dtype="float64") 
+
+#@njit(cache=True)
+def search_optimal_action(ori, ds, target_ori, candidate_action, delta_t):
+    d_loc = numpy.array(ds, dtype=numpy.float64)
+    costs = []
+    for action in candidate_action:
+        tr = action[0] * PI
+        ws = action[1]
+        n_ori, n_loc = vector_move_no_collision(ori, tr, ws, delta_t)
+
+        # The position error costs
+        dist = numpy.sum((n_loc - d_loc) ** 2) 
+        cost = dist
+
+        # The action costs
+        cost += 1.0e-4 * (action[0] ** 2 + action[1] ** 2)
+
+        # The orientation costs
+        if(dist > 0.50):
+            # In case can not match the target for far, try face the target
+            target_ori = math.atan2(d_loc[1], d_loc[0])
+        d_ori = 0
+        if(target_ori is not None):
+            # Else try prepare for the next target
+            d_ori = target_ori - n_ori
+            while(d_ori > PI):
+                d_ori -= t_PI
+            while(d_ori < -PI):
+                d_ori += t_PI
+            cost += d_ori * d_ori
+        print(action, d_ori, dist, cost)
+        costs.append(cost)
+    print("action", candidate_action[numpy.argmin(costs)])
+    return numpy.argmin(costs)
+
+def vector_move_with_collision(ori, pos, turn_rate, walk_speed, delta_t, cell_walls, cell_size, col_dist):
     slide_factor = 0.20
     if(walk_speed < 0):
         walk_speed *= 0.50
-    tmp_pos = numpy.copy(numpy.array(pos, dtype="float32"))
-    for _ in range(int(100 * deta_t)):
-        ori, offset = vector_move(ori, turn_rate, walk_speed, 0.01)
+    tmp_pos = numpy.copy(numpy.array(pos, dtype="float64"))
+    
+    t_prec = 0.01
+    iteration = int(delta_t / t_prec)
+    collision = 0.0
+
+    print("pre location", pos)
+    for i in range(iteration + 1):
+        t_res = min(delta_t - i * t_prec, t_prec)
+        if(t_res < 1.0e-8):
+            continue
+        ori, offset = vector_move_no_collision(ori, turn_rate, walk_speed, t_res)
         exp_pos = tmp_pos + offset
         exp_cell = exp_pos / cell_size
         
         #consider the collision in new cell
-        col_f = numpy.array([0.0, 0.0], dtype="float32")
+        col_f = numpy.array([0.0, 0.0], dtype="float64")
         for i in range(-1, 2): 
             for j in range(-1, 2): 
                 w_i = i + int(exp_cell[0])
@@ -89,6 +165,7 @@ def vector_move_with_collision(ori, pos, turn_rate, walk_speed, deta_t, cell_wal
                         cell_deta = exp_cell - numpy.floor(exp_cell) - numpy.array([i + 0.5, j + 0.5], dtype="float32")
                         col_f += collision_force(cell_deta, cell_size, col_dist)
         tmp_pos = col_f + exp_pos
-        collision = numpy.sum(col_f ** 2)
+        collision += numpy.sqrt(numpy.sum(col_f ** 2))
+    print("after location", tmp_pos, collision)
 
     return ori, tmp_pos, collision

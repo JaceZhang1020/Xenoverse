@@ -242,6 +242,11 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
            light_incident = abs(sin_abs_hp_array[d_h])
 
         ratio = hit_dist * cos_hp_array[d_h] / l_focal
+        if(abs(ratio) < 1.0e-8):
+            if(ratio > 0):
+                ratio = 1.0e-8
+            else:
+                ratio = -1.0e-8
         top_v = (ceil_height - vision_height) / ratio
         bot_v = vision_height / ratio
 
@@ -263,6 +268,11 @@ def maze_view(pos, ori, vision_height, cell_walls, cell_transparent, cell_texts,
         # Add those transparent
         for hit_dist, hit_i, hit_j, hit_side, trans_ID in hit_transparent:
             ratio = hit_dist * cos_hp_array[d_h] / l_focal
+            if(abs(ratio) < 1.0e-8):
+                if(ratio > 0):
+                    ratio = 1.0e-8
+                else:
+                    ratio = -1.0e-8
             top_v = (ceil_height - vision_height) / ratio
             bot_v = vision_height / ratio
             transparent_factor = 0.30
