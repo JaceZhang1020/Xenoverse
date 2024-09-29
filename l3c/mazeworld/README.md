@@ -1,10 +1,11 @@
 # Introduction
 
 MazeWorld is a 3D environment with randomly generated mazes and randomly generated navigation targets. It has been implemented in Numpy and supports both discrete and continuous action spaces. MazeWorld can be regarded as one type of ObjectNav tasks. However, unlike other ObjectNav tasks which can be mainly solved by \textbf{Zero-Shot} capabilities, MazeWorld requires iterative interaction and \texbf{self-adaption} between the agent and the environment to solve the task. Moreover, due to domain randomization, the maze can not be solved by zero-shot capabilities. MazeWorld is mainly used for research on Meta Reinforcement Learning (\textbf{Meta-RL}), especially In-Context Reinforcement Learning (\textbf{ICRL}).
-
-![Maze-Keyboard-Demo-1](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-1.gif)
-![Maze-Keyboard-Demo-2](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-2.gif)
-![Maze-Keyboard-Demo-3](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-3.gif)
+<div style="width: 960; overflow: hidden;">
+  <img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-1.jpg" alt="Keyboard Demo">
+  <img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-2.jpg" alt="Keyboard Demo">
+  <img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-3.jpg" alt="Keyboard Demo">
+</div>
 
 ## Keyboard Demonstrations
 
@@ -27,6 +28,7 @@ python -m l3c.mazeworld.demo.agent_play_demo --help
   --memory_keep_ratio FLOAT #MEMORY_KEEP_RATIO Keep ratio of memory when the agent switch from short to long term memory. 1.0 means perfect memory, 0.0 means no memory
   --verbose VERBOSE 
 ```
+
 ![Demonstration-Agent-Control](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/AgentDemo.gif) 
 
 # Installation
@@ -141,7 +143,9 @@ It is also possible to use "Discrete32" and "Continuous". If using the built-in 
 
 The action space for the MazeWorld follows the dynamics of the two-wheel-steering robot. For "Continuous" action space, the action is a 2-dimensional vector, where the first element controls the steering angle and the second element controls the speed. As shown in the figure below:
 
-![Demonstration-Dynamics](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Dynamics.jpg) 
+<div style="width: 240; overflow: hidden;">
+  <img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Dynamics.jpg" alt="Robot Dynamics">
+</div>
 
 ## Accessing the local and global map
 
@@ -157,7 +161,9 @@ global_map = maze_env.get_global_map()
 
 To retrieve the trajectory of the agent, you can call "save_trajectory()" at the end of each episode. The function returns a image with the trajectory of the agent in the global map, as shown in the figure below:
 
-![Demonstration-Trajectory](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/TrajectoryDemo.png) 
+<div style="width: 320; overflow: hidden;">
+  <img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/TrajectoryDemo.png" alt="Robot Trajectory">
+</div>
 
 ## Reward Setting
 
@@ -175,4 +181,6 @@ The commands in MazeWorld are represented by specific color. You might choose to
     rgb_command = info["command"]
 ```
 
-![Demonstration-Command](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/CommandDemo.jpg) 
+<div style="width: 480; overflow: hidden;">
+  <img src="https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/CommandDemo.jpg" alt="command_in_observation">
+</div>
