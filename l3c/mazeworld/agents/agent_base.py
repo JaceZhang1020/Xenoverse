@@ -2,7 +2,7 @@ import sys
 import numpy
 from queue import Queue
 from copy import deepcopy
-from l3c.mazeworld.envs.dynamics import PI, DEFAULT_ACTION_SPACE
+from l3c.mazeworld.envs.dynamics import PI, DEFAULT_ACTION_SPACE_16, DEFAULT_ACTION_SPACE_32
 from l3c.mazeworld.envs.maze_env import MazeWorldContinuous3D
 
 
@@ -27,9 +27,10 @@ class AgentBase(object):
         self.neighbors = [(-1, 0), (1, 0), (0, 1), (0, -1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
         self._landmarks_visit = dict()
         self._short_term_memory = list()
+        self._action_space = self.maze_env.list_actions
 
-        if("action_space" not in self.__dict__):
-            self.action_space = DEFAULT_ACTION_SPACE
+        if(self._action_space is None):
+            raise Exception("For smart agents, maze environment must use Discrete16 or Discrete32")
 
         if("short_term_memory_size" not in kwargs):
             self.short_term_memory_size = 3

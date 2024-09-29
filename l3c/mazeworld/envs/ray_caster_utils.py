@@ -94,11 +94,6 @@ def DDA_2D(pos, i, j, cell_number, cell_size, cos_ori, sin_ori, cell_walls, cell
                 if(cell_walls[hit_i, hit_j] > 0):
                     hit_side = 0
                     break
-
-                exposed_cell.append([hit_i, hit_j]) # The cell becomes seen to the agent
-                if(cell_walls[hit_i, hit_j] > 0):
-                    hit_side = 0
-                    break
             side_dist_x = delta_dist_x
         else:
             hit_j += delta_j

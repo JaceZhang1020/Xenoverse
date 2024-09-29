@@ -19,7 +19,7 @@ def convolve_exploration(exp_wht):
     return res
 
 class SmartSLAMAgent(AgentBase):
-    def render_init(self, view_size=(640, 640)):
+    def render_init(self, view_size=(480, 480)):
         """
         Initialize a God View With Landmarks
         """
@@ -68,19 +68,20 @@ class SmartSLAMAgent(AgentBase):
                 0.4 * self._pos_conversion_x, 0.5 * self._pos_conversion_x)
 
         # paint target trajectory
-        for i in range(len(self._path)-1):
-            factor = i / len(self._path)
+        for i in range(0, len(self._path) - 1):
+            factor = (i + 1) / len(self._path)
             p = self._path[i]
             n = self._path[i+1]
             p = [(p[0] + 0.5) * self._render_cell_size_x, (p[1] + 0.5) *  self._render_cell_size_y]
             n = [(n[0] + 0.5) * self._render_cell_size_x, (n[1] + 0.5) *  self._render_cell_size_y]
             pygame.draw.line(self._screen, pygame.Color(int(255 * factor), int(255 * (1 - factor)), 128, 255), p, n, width=1)
 
+        # paint the first segment of the path
         p = self._path[0]
         n = self._cur_grid_float
         p = [int((p[0] + 0.5) * self._render_cell_size_x), int((p[1] + 0.5) *  self._render_cell_size_y)]
         n = [int(n[0] * self._render_cell_size_x), int(n[1] *  self._render_cell_size_y)]
-        pygame.draw.line(self._screen, pygame.Color(255, 0, 128, 255), p, n, width=1)
+        pygame.draw.line(self._screen, pygame.Color(0, 255, 128, 255), p, n, width=1)
 
         # paint observation
         obs_surf = pygame.surfarray.make_surface(observation)
@@ -105,11 +106,11 @@ class SmartSLAMAgent(AgentBase):
             i = dx + cx
             j = dy + cy
             # Initialize the neiboring costs
-            deta = numpy.asarray([self._cur_grid_float[0] - (i + 0.5), self._cur_grid_float[0] - (i + 0.5)])
+            deta = numpy.asarray([(i + 0.5) - self._cur_grid_float[0], (j + 0.5) - self._cur_grid_float[1]])
             dist = numpy.sqrt(numpy.sum(deta ** 2))
             ori = 1.0 - numpy.sum(deta / (dist + 1.0e-3) * numpy.array([numpy.cos(self._agent_ori), numpy.sin(self._agent_ori)]))
             ori_cost = 20.0 * ori * min(dist, 0.01)
-            self._cost_map[i, j] = dist + ori * 2.0 * min(dist, 0.20)
+            self._cost_map[i, j] = dist + ori_cost
             refresh_list.put((i, j))
 
         while not refresh_list.empty():
@@ -133,8 +134,6 @@ class SmartSLAMAgent(AgentBase):
                     refresh_list.put((n_x, n_y))
 
     def policy(self, observation, r):
-        import time
-        time.sleep(1.0)
         self.update_cost_map()
         path_greedy = self.navigate_landmarks_navigate(self._command)
         path = path_greedy
@@ -153,13 +152,14 @@ class SmartSLAMAgent(AgentBase):
             raise Exception("Unexpected Error in retrieving path for the current agent")
         d_x = path[0][0] + 0.5 - self._cur_grid_float[0]
         d_y = path[0][1] + 0.5 - self._cur_grid_float[1]
-        deta_s = numpy.sqrt(d_x ** 2 + d_y ** 2)
         if(len(path) > 1):
-            target_ori = math.atan2(d_y, d_x)
-        else:
-            target_ori = None
+            d_x2 = path[1][0] + 0.5 - self._cur_grid_float[0]
+            d_y2 = path[1][1] + 0.5 - self._cur_grid_float[1]
+            targ2 = (d_x2, d_y2)
 
-        return search_optimal_action(self._agent_ori, (d_x, d_y), target_ori, self.action_space, 1.0)
+        else:
+            targ2 = None
+        return search_optimal_action(self._agent_ori, (d_x, d_y), targ2, self._action_space, 1.0)
 
     def retrieve_path(self, cost_map, goal_idx):
         path = [(int(goal_idx[0]), int(goal_idx[1]))]
@@ -208,7 +208,7 @@ class SmartSLAMAgent(AgentBase):
             d_x2 = path[1][0] + 0.5 - self._cur_grid_float[0]
             d_y2 = path[1][1] + 0.5 - self._cur_grid_float[1]
             deta_s2 = numpy.sqrt(d_x2 ** 2 + d_y2 ** 2)
-            if(deta_s + cost_map[*path[0]] > deta_s2 + cost_map[*path[1]]):
+            if(deta_s + cost_map[*path[0]] > deta_s2 + cost_map[*path[1]] and deta_s < 0.2):
                 del path[0]
         return path
 

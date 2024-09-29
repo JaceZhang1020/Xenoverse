@@ -252,14 +252,18 @@ class MazeBase(object):
 
         surf_map = pygame.Surface(resolution)
         surf_map.fill(pygame.Color("grey"))
-        render_x = resolution[0] / map_range
-        render_y = resolution[1] / map_range
+
+        # Number of pixels per distance
+        render_x = 0.5 * resolution[0] / map_range
+        render_y = 0.5 * resolution[1] / map_range
         render_avg = 0.5 * (render_x + render_y)
         it = numpy.nditer(self._cell_walls, flags=["multi_index"])
         landmark_size = 0.60
         max_range = map_range + 0.5 * self._cell_size
         map_grids = map_range / self._cell_size
-        delta = numpy.array([render_x, render_y])
+
+        # Number of pixels per grids
+        delta = self._cell_size * numpy.array([render_x, render_y])
 
         for _ in it:
             x,y = it.multi_index
@@ -290,7 +294,7 @@ class MazeBase(object):
                                  [p1, p2, p3, p4])
             if(landmarks_id > -1):
                 pygame.draw.circle(surf_map, landmarks_color(landmarks_id, opacity=0.0), 
-                                 ((fx + map_grids) * render_x, (fy + map_grids) * render_y), 0.5 * landmark_size * render_avg, 
+                                 ((fx + map_grids) * delta[0], (fy + map_grids) * delta[1]), 0.5 * landmark_size * render_avg * self._cell_size, 
                                  width=0)
         npy_map = pygame.surfarray.array3d(surf_map)
         return surf_map, npy_map

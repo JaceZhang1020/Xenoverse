@@ -13,21 +13,37 @@ OFFSET_01 = numpy.asarray([-0.5, 0.5], dtype="float64")
 OFFSET_m0 = numpy.asarray([-0.5, -0.5], dtype="float64")
 OFFSET_0m = numpy.asarray([0.5, -0.5], dtype="float64")
 
-DEFAULT_ACTION_SPACE = [(0.0, 0.0), 
+DEFAULT_ACTION_SPACE_16 = [(0.0, 0.5), 
                         (0.05, 0.0), (-0.05, 0.0),
                         (0.1, 0.0), (-0.1, 0.0),
                         (0.2, 0.0), (-0.2, 0.0),
-                        (0.35, 0.0), (-0.35, 0.0),
+                        (0.3, 0.0), (-0.3, 0.0),
                         (0.5, 0.0), (-0.5, 0.0), 
-                        (0.0, 0.25), (0.0, 1.0), (0.0, -0.25),
-                        (0.05, 0.25), (0.05, 1.0), 
-                        (-0.05, 0.25), (-0.05, 1.0), 
-                        (0.10, 0.25), (0.10, 1.0), 
-                        (-0.10, 0.25), (-0.10, 1.0), 
+                        (0.0, 1.0),
+                        (0.05, 1.0), 
+                        (-0.05, 1.0), 
+                        (0.10, 1.0), 
+                        (-0.10, 1.0), 
                         ]
 
-def DefaultActionSpace(action_idx):
-    return DEFAULT_ACTION_SPACE[action_idx]
+DEFAULT_ACTION_SPACE_32 = [(0.0, 0.2), 
+                        (0.02, 0.0), (-0.02, 0.0),
+                        (0.05, 0.0), (-0.05, 0.0),
+                        (0.1, 0.0), (-0.1, 0.0),
+                        (0.2, 0.0), (-0.2, 0.0),
+                        (0.3, 0.0), (-0.3, 0.0),
+                        (0.4, 0.0), (-0.4, 0.0),
+                        (0.5, 0.0), (-0.5, 0.0), 
+                        (0.0, 0.5), (0.0, 1.0),
+                        (0.02, 0.5), (0.02, 1.0), 
+                        (-0.02, 0.5), (-0.02, 1.0),
+                        (0.05, 0.5), (0.05, 1.0), 
+                        (-0.05, 0.5), (-0.05, 1.0),
+                        (0.10, 0.5), (0.10, 1.0), 
+                        (-0.10, 0.5), (-0.10, 1.0),
+                        (0.0, -0.2),
+                        (0.1, -0.2), (-0.1, -0.2)
+                        ]
 
 @njit(cache=True)
 def angle_normalization(t):
@@ -134,15 +150,13 @@ def search_optimal_action(ori, targ1, targ2, candidate_action, delta_t):
             delta2_ang = angle_normalization(targ2_ang - n_ori)
 
         # Try to face the next target by looking ahead
-        f= min(dist/1.0, 1.0)
+        f= min(dist/0.2, 1.0)
         cost += delta1_ang * delta1_ang * f + delta2_ang * delta2_ang * (1 - f)
         costs.append(cost)
     return numpy.argmin(numpy.array(costs))
 
 def vector_move_with_collision(ori, pos, turn_rate, walk_speed, delta_t, cell_walls, cell_size, col_dist):
     slide_factor = 0.20
-    if(walk_speed < 0):
-        walk_speed *= 0.50
     tmp_pos = numpy.copy(numpy.array(pos, dtype="float64"))
     
     t_prec = 0.01

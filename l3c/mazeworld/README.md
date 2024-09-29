@@ -1,173 +1,178 @@
 # Introduction
 
-MazeWorld is a powerful and efficient simulator for navigating a randomly generated maze. You may use MazeWorld to generate unlimited type of mazes and tasks. We aim to facilitate researches in Meta-Reinforcement-Learning and Artificial General Intelligence.
+MazeWorld is a 3D environment with randomly generated mazes and randomly generated navigation targets. It has been implemented in Numpy and supports both discrete and continuous action spaces. MazeWorld can be regarded as one type of ObjectNav tasks. However, unlike other ObjectNav tasks which can be mainly solved by \textbf{Zero-Shot} capabilities, MazeWorld requires iterative interaction and \texbf{self-adaption} between the agent and the environment to solve the task. Moreover, due to domain randomization, the maze can not be solved by zero-shot capabilities. MazeWorld is mainly used for research on Meta Reinforcement Learning (\textbf{Meta-RL}), especially In-Context Reinforcement Learning (\textbf{ICRL}).
 
-## Check some of the demonstrations here:
-
-![Demonstration-Keyboard-Control-1](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-1-demo.gif)
-
-![Demonstration-Keyboard-Control-2](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/NAVIGATION-2-demo.gif)
-
-![Demonstration-Keyboard-Control-3](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/SURVIVAL-1-demo.gif)
-
-# Quick Start
+![Maze-Keyboard-Demo-1](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-1.gif)
+![Maze-Keyboard-Demo-2](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-2.gif)
+![Maze-Keyboard-Demo-3](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Keyboard-Demo-3.gif)
 
 ## Keyboard Demonstrations
 
 You may try MazeWorld with your own keyboard with the following commands:
 ```bash
 python -m l3c.mazeworld.demo.keyboard_play_demo --help
-  --maze_type {Discrete2D,Discrete3D,Continuous3D}
-  --scale SCALE
-  --task_type {SURVIVAL,NAVIGATION}
   --max_steps MAX_STEPS
-  --density DENSITY     Density of the walls satisfying that all spaces are connected
-  --visibility_2D VISIBILITY_2D     Grids vision range, only valid in 2D mode
-  --visibility_3D VISIBILITY_3D     3D vision range, Only valid in 3D mode
-  --wall_height WALL_HEIGHT     Only valid in 3D mode
-  --cell_size CELL_SIZE     Only valid in 3D mode
-  --step_reward STEP_REWARD     Default rewards per-step
-  --n_landmarks N_LANDMARKS     Number of landmarks, valid for both SURVIVAL and NAVIGATION task
-  --r_landmarks R_LANDMARKS     Average rewards of the landmarks, only valid in SURVIVAL task
-  --cd_landmarks CD_LANDMARKS   Refresh interval of landmarks
-  --save_replay SAVE_REPLAY     Save the replay trajectory in file
+  --visibility_3D VISIBILITY_3D     #3D vision range, Only valid in 3D mode
+  --save_replay SAVE_REPLAY         #Save the replay trajectory in file
   --verbose VERBOSE
 ```
 
-## Smart Automatic Agent Demonstration
+## Smart SLAM-based Agent
 
-We implement a smart agent that can do SLAM & Planning in MazeWorlds. You may check the demonstration with the following commands:
+We implement a smart SLAM-based agent that can do SLAM & Planning automatically, you can try it with the following command:
 ```bash
 python -m l3c.mazeworld.demo.agent_play_demo --help
-  --maze_type {Discrete2D,Discrete3D,Continuous3D}
-  --scale SCALE
-  --task_type {SURVIVAL,NAVIGATION}
   --max_steps MAX_STEPS
-  --density DENSITY     Density of the walls satisfying that all spaces are connected
-  --visibility_2D VISIBILITY_2D Grids vision range, only valid in 2D mode
-  --visibility_3D VISIBILITY_3D 3D vision range, Only valid in 3D mode
-  --wall_height WALL_HEIGHT Only valid in 3D mode
-  --cell_size CELL_SIZE Only valid in 3D mode
-  --step_reward STEP_REWARD Default rewards per-step
-  --n_landmarks N_LANDMARKS Number of landmarks, valid for both SURVIVAL and NAVIGATION task
-  --r_landmarks R_LANDMARKS Average rewards of the landmarks, only valid in SURVIVAL task
-  --cd_landmarks CD_LANDMARKS Refresh interval of landmarks
-  --save_replay SAVE_REPLAY Save the replay trajectory in file
-  --memory_keep_ratio MEMORY_KEEP_RATIO Keep ratio of memory when the agent switch from short to long term memory. 1.0 means perfect memory, 0.0 means no memory
-  --verbose VERBOSE
+  --save_replay FILE_NAME #SAVE_REPLAY Save the replay trajectory in file
+  --memory_keep_ratio FLOAT #MEMORY_KEEP_RATIO Keep ratio of memory when the agent switch from short to long term memory. 1.0 means perfect memory, 0.0 means no memory
+  --verbose VERBOSE 
 ```
-![Demonstration-Agent-Control](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/AGENT-1-demo.gif) 
-
-## APIs
-
-Here is an example of creating and running MazeWorld environments
-
-### Creating Maze Environments
-```python
-import gym
-import l3c.mazeworld
-from l3c.mazeworld import MazeTaskSampler
-
-maze_env = gym.make("mazeworld-discrete-2D-v0", enable_render=True, task_type="NAVIGATION") # Creating discrete 2D Maze environments with NAVIGATION task
-maze_env = gym.make("mazeworld-discrete-3D-v1", enable_render=True, task_type="NAVIGATION") # Creating discrete 3D Maze environments with NAVIGATION task
-maze_env = gym.make("mazeworld-continuous-3D-v1", enable_render=True, task_type="SURVIVAL") # Creating continuous 3D Maze environments with SURVIVAL task
-```
-
-### Creating Maze Configurations
-```python
-#Sample a task by specifying the configurations
-task = MazeTaskSampler(
-    n            = 15,  # Scale of the maze .
-    allow_loops  = False,  # If false, there will be no loops in the maze.
-    cell_size    = 2.0, # specifying the size of each cell, only valid for 3D mazes
-    wall_height  = 3.2, # specifying the height of the wall, only valid for 3D mazes
-    agent_height = 1.6, # specifying the height of the agent, only valid for 3D mazes
-    step_reward  = -0.01, # specifying punishment in each step in ESCAPE mode, also the reduction of life in each step in SURVIVAL mode
-    goal_reward  = 1.0, # specifying reward of reaching the goal, only valid in ESCAPE mode
-    initial_life = 1.0, # specifying the initial life of the agent, only valid in SURVIVAL mode
-    max_life     = 2.0, # specifying the maximum life of the agent, acquiring food beyond max_life will not lead to growth in life. Only valid in SURVIVAL mode
-    landmarks_number = 5, # specifying the number of landmarks in the maze
-    landmarks_avg_reward = 0.60, # In SURVIVAL mode, the expected mean reward of each landmarks
-    landmarks_refresh_interval = 200, # In SURVIVAL mode, the landmarks refresh in that much steps
-    commands_sequence = 200, # In NAVIGATION mode, the tasks include navigating to that much targets
-    wall_density = 0.40, # Specifying the wall density in the region, only valid when loops are allowed. E.g. crowd_ratio=0 means no obstacles (except the boundary)
-    )
-```
-
-### Running Maze Environment Step By Step
-```python
-#Set the task configuration to the meta environment
-maze_env.set_task(task)
-maze_env.reset()
-
-#Start the task
-done = False
-while not done:
-    action = maze_env.action_space.sample() 
-    observation, reward, done, info = maze_env.step(action)
-    maze_env.render()
-```
-
-
-## Writing your own policy
-
-Specifying action with your own policy without relying on keyboards and rendering, check
-```bash
-l3c/mazeworld/tests/test.py
-```
-
-## Using the build-in agents
-
-We implement a smart agent with simulated localization and mapping capbability. The agent does not have all the ground truth information from the beginning, however, it has perfect memory and planning algorithm, and trade-off exploration & exploitation as well, (which can be regarded as the ideal policy). Below is an example to use the smart-agent API
-```python
-from l3c.mazeworld.agents import SmartSLAMAgent
-
-agent = SmartSLAMAgent(maze_env=maze_env, memory_keep_ratio=0.25, render=True) # memory_keep_ratio=0.25 means the agent only keeps 25% of what it sees in the long term memory
-action = agent.step(observation, reward)
-```
-It's important to be aware that the "render=True" option cannot be utilized concurrently with "enable_render=True" when configuring the maze environment. This is because the visualization may experience interference under such circumstances.Developers can write their own agents following the guidance of agents/agent_base.py
+![Demonstration-Agent-Control](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/AgentDemo.gif) 
 
 # Installation
 
 #### Remote installation
-
 ```bash
 pip install l3c[mazeworld]
 ```
 
 #### Local installation
-
 ```bash
 git clone https://github.com/FutureAGI/L3C
 cd l3c
 pip install .[mazeworld]
 ```
 
-# Explaining the maze type and task type
+# Quick Start with the APIs
 
-3 Types of Mazes
+Here is an example of creating and running MazeWorld environments
 
-- **mazeworld-discrete-2D-v1** <br>
---- Observation space: its surrounding $(2n+1)\times(2n+1)$ (n specified by visibility_2D parameter) grids<br>
---- Action space: 4-D discrete N/S/W/E <br><br>
-- **mazeworld-discrete-3D-v0** <br>
---- Observation space: RGB image of 3D first-person view. <br>
---- Action space: 4-D discrete TurnLeft/TurnRight/GoForward/GoBackward. <br><br>
-- **mazeworld-continuous-3D-v0** <br>
---- Observation space: RGB image of 3D first-person view.<br>
---- Action space: 2-D continuous [Left/Right, Forward/Backward]<br><br>
+## Creating Maze Environments
+```python
+import gym
+import l3c.mazeworld
+from l3c.mazeworld import MazeTaskSampler
 
-2 Types of Tasks:
+# Make sure you have access to GUI if setting enable_render=True
+maze_env = gym.make("mazeworld-v2", enable_render=True)
 
-- **NAVIGATION** mode <br>
---- Reach an target position (goal) as soon as possible, the target is a specific landmark specified by the color bar in observations <br>
---- Each step the agent receives reward of step_reward <br>
---- Acquire goal_reward when reaching the specified target (goal) <br>
---- Episode terminates when finishing all the specified target in commands_sequence <br><br>
-- **SURVIVAL** mode <br>
---- The agent begins with initial_life specified by the task <br>
---- Episode terminates when life goes below 0 <br>
---- For each landmark, a unknown random reward is attached <br>
---- When the agent reaches the landmark, it is consumed to recover its life (can be punishments). The landmarks will be refreshed after certain amount of time <br>
---- The life slowly decreases with time, depeding on step_reward <br>
---- The agent's life is shown by a color bar on the top (in 3D mazes) or the color on the center area (in 2D mazes) <br>
+# In case you want to run the environment in the backend, set enable_render=False
+# maze_env = gym.make("mazeworld-v2", enable_render=False)
+```
+
+## Sampling a maze task
+
+```python
+#Sample a random maze task
+task = MazeTaskSampler()
+```
+
+It is important to note that sampling a task might result in a maze that is variant in topology, texture, navigation targets, size, height of the robot, height of the wall, commands etc.
+
+In case you want to resample a task, while keeping the some of your environment settings unchanged, you can do the following:
+
+```python
+#Sample a new task from a existing task, keep the scenario unchanged, only change the commands and start point
+from l3c.mazeworld import Resampler
+new_task = Resampler(task)
+```
+
+## Running agent-environment interaction
+
+Here is an simplest version of running the maze environment step by step
+
+```python
+#Set the task configuration to the meta environment
+maze_env.set_task(task)
+initial_observation, initial_information = maze_env.reset()
+
+#Start the task
+done = False
+while not done:
+    action = maze_env.action_space.sample() # Replace it with your own policy function
+    observation, reward, done, info = maze_env.step(action)
+    maze_env.render()
+```
+
+## Using the build-in agents
+
+We implement a smart agent with simulated SLAM and planning abilities. It can effectively employ a Exploration-then-Exploitation strategy to explore the environment and navigate to the target. Notice that the agent can be used as high-level baseline and teacher for generating trajectories efficiently, but it is not guarranteed to be achieve global optimal performance.
+
+```python
+from l3c.mazeworld.agents import SmartSLAMAgent
+
+agent = SmartSLAMAgent(maze_env=maze_env, memory_keep_ratio=0.25, render=True) # memory_keep_ratio=0.25 means the agent only keeps 25% of what it sees in the long term memory
+action = agent.step(observation, reward)
+```
+It's important to be aware that the "render=True" option cannot be utilized concurrently with "enable_render=True" when configuring the maze environment.
+
+# High-level APIs
+
+## Configurating the task sampler
+
+You may pass arguments to the task sampler to control the generation of maze tasks
+
+```python
+MazeTaskSampler(
+  n_range=(9, 25),  # The range of the grids used in the maze
+  allow_loops=True,  # Whether to allow loops in the maze
+  cell_size_range=(1.5, 4.5), # The range of the size of each grid (cell)
+  wall_height_range=(2.0, 6.0),  # The range of the height of the wall
+  agent_height_range=(1.6, 2.0), # The range of the height of the robot
+  landmarks_number_range=(5, 10), # The range of the number of landmarks (navigation targets)
+  commands_sequence=200, # The number of commands in navigation
+  wall_density_range=(0.2, 0.4)) # The range of the density that controls the fraction of the wall
+```
+
+For instance if you want to generate mazes of 15x15 grids with grid size being always 2.0 (which would give a 30mx30m (900m^2) maze, you can do the following:)
+```python
+task = MazeTaskSampler(n_range=(15, 15), cell_size_range=(2.0, 2.0))
+```
+
+## Robot Action Space
+
+You may choose different action space for the robot by setting the "action_space_type" argument when configuring the maze environment. E.g., the default choice for action space is "Discrete16", which means the robot have 16 different actions to choose from.
+
+```python
+maze_env = gym.make("mazeworld-v2", action_space_type="Discrete16", enable_render=False)
+```
+
+It is also possible to use "Discrete32" and "Continuous". If using the built-in agent, you can not set the "action_space_type" argument to "Continuous", only "Discrete16" and "Discrete32" are supported.
+
+The action space for the MazeWorld follows the dynamics of the two-wheel-steering robot. For "Continuous" action space, the action is a 2-dimensional vector, where the first element controls the steering angle and the second element controls the speed. As shown in the figure below:
+
+![Demonstration-Dynamics](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/Dynamics.jpg) 
+
+## Accessing the local and global map
+
+You might want to directly access the local and global map of the maze environment. You can do so by calling "get_local_map()" and "get_global_map()", which return a numpy array of the local and global map respectively. The local map is represented in the local coordinate system, while the global map is represented in the global coordinate system.
+
+```python
+maze_env = gym.make("mazeworld-v2", enable_render=False)
+local_map = maze_env.get_local_map()
+global_map = maze_env.get_global_map()
+```
+
+## Retrieve the trajectory of the agent
+
+To retrieve the trajectory of the agent, you can call "save_trajectory()" at the end of each episode. The function returns a image with the trajectory of the agent in the global map, as shown in the figure below:
+
+![Demonstration-Trajectory](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/TrajectoryDemo.png) 
+
+## Reward Setting
+
+The MazeWorld defaultly uses a reward 0 for each step, a positive reward relating to the scale of the maze for reaching the target, and punishment for collision. You can also customize the reward function by setting "step_reward", "goal_reward", and "collision_punishment" in the MazeTaskSampler function.
+
+## Reading the commands
+
+The commands in MazeWorld are represented by specific color. You might choose to embed the command as a color bar in the 3D observtion by setting "command_in_sequence=True" when initializing the environment. You may also directly access the rgb color of the command by the returned information of "step()" function:
+
+```python
+...
+  ...
+    ...
+    observation, reward, done, info = maze_env.step(action)
+    rgb_command = info["command"]
+```
+
+![Demonstration-Command](https://github.com/FutureAGI/DataPack/blob/main/demo/mazeworld/CommandDemo.jpg) 

@@ -5,6 +5,7 @@ import os
 import numpy
 import pygame
 import random
+import time
 from pygame import font
 from numpy import random as npyrnd
 from numpy.linalg import norm
@@ -56,7 +57,6 @@ class MazeCoreContinuous3D(MazeBase):
                 self._agent_ori, self._agent_loc, turn_rate, walk_speed, delta_t, 
                 self._cell_walls, self._cell_size, self.collision_dist)
         self._collision_punish = self._collision_reward * collide
-
         self._agent_grid = self.get_loc_grid(self._agent_loc)
         reward, done = self.evaluation_rule()
         self.update_observation()
@@ -78,6 +78,7 @@ class MazeCoreContinuous3D(MazeBase):
         #Keyboard control cases
         turn_rate = None
         walk_speed = None
+        time.sleep(0.01)
         if keys[pygame.K_LEFT] or keys[pygame.K_RIGHT] or keys[pygame.K_UP] or keys[pygame.K_DOWN]:
             turn_rate = 0.0
             walk_speed = 0.0
@@ -111,7 +112,7 @@ class MazeCoreContinuous3D(MazeBase):
         self._obs_surf = pygame.surfarray.make_surface(self._observation)
 
     def get_observation(self):
-        return numpy.copy(self._observation)
+        return numpy.copy(self._observation.astype('uint8'))
 
-    def get_info(self):
-        return {"command": self._command_rgb}
+    def get_info(self, info):
+        info["command"] = self._command_rgb

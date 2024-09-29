@@ -8,6 +8,7 @@ import pygame
 from gym import error, spaces, utils
 from gym.utils import seeding
 from l3c.mazeworld.envs.maze_continuous_3d import MazeCoreContinuous3D
+from l3c.mazeworld.envs.dynamics import DEFAULT_ACTION_SPACE_16, DEFAULT_ACTION_SPACE_32
 
 class MazeWorldEnvBase(gym.Env):
     """
@@ -37,9 +38,11 @@ class MazeWorldEnvBase(gym.Env):
         if(self.enable_render):
             self.maze_core.render_init(self.render_viewsize)
             self.keyboard_press = pygame.key.get_pressed()
+        info = {"steps": self.maze_core.steps}
+        self.maze_core.get_info(info)
         self.need_reset = False
         self.key_done = False
-        return state
+        return state, info
 
     def action_control(self, action):
         raise NotImplementedError("Must implement the action control logic")
@@ -55,6 +58,7 @@ class MazeWorldEnvBase(gym.Env):
         if(internal_action is None):
             return self.maze_core.get_observation(), 0, False, info 
         reward, done = self.maze_core.do_action(internal_action)
+        self.maze_core.get_info(info)
 
         if(done):
             self.need_reset=True
@@ -109,7 +113,8 @@ class MazeWorldContinuous3D(MazeWorldEnvBase):
             max_steps = 5000,
             resolution=(320, 320),
             visibility_3D=12.0,
-            command_in_observation=False
+            command_in_observation=False,
+            action_space_type="Discrete16",  # Must choose in Discrete16, Discrete32, Continuous
             ):
         super(MazeWorldContinuous3D, self).__init__(
             "Continuous3D",
@@ -124,22 +129,38 @@ class MazeWorldContinuous3D(MazeWorldEnvBase):
                 visibility_3D=visibility_3D,
                 command_in_observation=command_in_observation
                 )
+        
+        self.inner_action_list  = None
+        if(action_space_type == "Discrete16"):
+            self.action_space = spaces.Discrete(16)
+            # Using Default Discrete Actions
+            self.inner_action_list = DEFAULT_ACTION_SPACE_16
+        elif(action_space_type == "Discrete32"):
+            self.action_space = spaces.Discrete(32)
+            # Using Default Discrete Actions
+            self.inner_action_list = DEFAULT_ACTION_SPACE_32
+        elif(action_space_type == "Continuous"):
+            # Turning Left/Right and go backward / forward
+            self.action_space = spaces.Box(low=-1, high=1, shape=(2,), dtype=numpy.float32)
+        else:
+            raise ValueError("Invalid Action Space Type {}. Can only accept Discrete16, Discrete32, Continuous".format(action_space_type))
 
-        # Turning Left/Right and go backward / forward
-        self.action_space = spaces.Box(low=numpy.array([-1.0, -1.0]), 
-                high=numpy.array([1.0, 1.0]), dtype=numpy.float32)
         # observation is the x, y coordinate of the grid
-        self.observation_space = spaces.Box(low=numpy.zeros(shape=(resolution[0], resolution[1], 3), dtype=numpy.float32), 
-                high=numpy.full((resolution[0], resolution[1], 3), 256, dtype=numpy.float32),
-                dtype=numpy.float32)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(resolution[0], resolution[1], 3), dtype=numpy.uint8)
 
     def action_control(self, action):
         if(action is None): # Only when there is no action input can we use keyboard control
             pygame.time.delay(20) # 50 FPS
             tr, ws = self.maze_core.movement_control(self.keyboard_press)
         else:
-            tr = action[0]
-            ws = action[1]
+            if(self.inner_action_list is not None):
+                tr, ws = self.inner_action_list[action]
+            else:
+                tr, ws = action
         if(tr is None or ws is None):
             return None
         return [tr, ws]
+    
+    @property
+    def list_actions(self):
+        return self.inner_action_list

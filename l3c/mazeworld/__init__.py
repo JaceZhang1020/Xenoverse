@@ -14,7 +14,7 @@
 
 from gym.envs.registration import register
 from l3c.mazeworld.envs import MazeWorldContinuous3D
-from l3c.mazeworld.envs import MazeTaskSampler
+from l3c.mazeworld.envs import MazeTaskSampler, Resampler
 
 register(
     id='mazeworld-v2',
@@ -25,6 +25,7 @@ register(
         "resolution": (256, 256),
         "max_steps": 5000,
         "visibility_3D": 12.0,
-        "command_in_observation": False
+        "command_in_observation": False,
+        "action_space_type": "Discrete16" ,
     }
 )

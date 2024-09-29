@@ -50,6 +50,12 @@ def genstart(cell_walls, cell_landmarks):
     idxes = numpy.argsort(landmarks_likelihood, axis=None)
     return idx_trans(idxes[-1], n)
 
+def dict_formatter(data):
+    str=""
+    for key, value in data.items():
+        str += f"\n\n{key}:\n{value}\n\n"
+    return str
+
 class MazeTaskManager(object):
     def __init__(self, texture_dir, verbose=False):
         pathes = os.path.split(os.path.abspath(__file__))
@@ -84,26 +90,33 @@ class MazeTaskManager(object):
         return xs
 
     def sample_task(self,
-            n=15, 
-            allow_loops=True, 
-            cell_size=2.0, 
-            wall_height=3.2, 
-            agent_height=1.6,
-            step_reward=-0.01,
-            collision_reward=-1.0,
-            goal_reward=None,
-            max_life=3.0,
-            landmarks_number=5,
+            n_range:tuple=(9, 25), 
+            allow_loops:bool=True, 
+            cell_size_range=(1.5, 4.5), 
+            wall_height_range=(2.0, 6.0), 
+            agent_height_range=(1.6, 2.0),
+            wall_density_range=(0.2, 0.4),
+            landmarks_number_range=(5, 15),
             commands_sequence=200,
-            wall_density=0.40,
+            step_reward=0.0,
+            collision_reward=-0.20,
+            goal_reward=None,
             seed=None,
             verbose=False):
         # Initialize the maze ...
         if(seed is not None):
             seed = time.time() * 1000 % 65536
         numpy.random.seed(seed)
+
+        cell_size = random.uniform(*cell_size_range)
+        wall_height = random.uniform(*wall_height_range)
+        agent_height = random.uniform(*agent_height_range)
+        wall_density = random.uniform(*wall_density_range)
+        landmarks_number = random.randint(*landmarks_number_range)
+        n = random.randint(*n_range)
+        if(n % 2 == 0):
+            n += 1
         assert n > 6, "Minimum required cells are 7"
-        assert n % 2 != 0, "Cell Numbers can only be odd"
         assert landmarks_number > 1, "There must be at least 1 goal, thus landmarks_number must > 1"
         if(landmarks_number > 15):
             landmarks_number = 15
@@ -123,10 +136,9 @@ class MazeTaskManager(object):
         # Generate start location
         start = genstart(cell_walls, cell_landmarks)
 
-        #Calculate goal reward, default is - n sqrt(n) * step_reward
-        assert step_reward < 0, "step_reward must be < 0"
+        #Calculate goal reward
         if(goal_reward is None):
-            def_goal_reward = - numpy.sqrt(n) * n * step_reward
+            def_goal_reward = n * numpy.sqrt(n) / 60.0
         else:
             def_goal_reward = goal_reward
         assert def_goal_reward > 0, "goal reward must be > 0"
@@ -134,16 +146,7 @@ class MazeTaskManager(object):
         # Sample Commands Sequences
         commands_sequence = self.sample_cmds(len(landmarks), commands_sequence)
 
-        if(verbose):
-            print("\n\n---------Successfully generate maze task with the following attributes-----------\n")
-            print("Maze size %s x %s" %(n, n)) 
-            print("Initialze born location: %s,%s" % start)
-            integrate_maze = cell_landmarks + 1 - cell_walls
-            print("Maze configuration (-1: walls, 0 empty, >1 landmarks and ID): \n%s" % integrate_maze)
-            print("Commands sequence: \n%s" % commands_sequence)
-            print("\n----------------------\n\n")
-
-        return {"start":start,
+        task = {"start":start,
                 "cell_walls":cell_walls,
                 "cell_texts":cell_texts,
                 "cell_size":cell_size,
@@ -157,18 +160,26 @@ class MazeTaskManager(object):
                 "commands_sequence":commands_sequence,
                 "landmarks_coordinates":landmarks,
                 "cell_landmarks":cell_landmarks}
+        
+        if(verbose):
+            print("\n\n-------Successfully Generate Task-------\n")
+            print(dict_formatter(task))
+            print("\n----------------------------------------\n\n")
+
+        return task
 
     def resample_task(self, task, 
             resample_cmd=True, 
             resample_start=True, 
             resample_landmarks=False,
             resample_landmarks_color=False,
-            seed=None):
+            seed=None, verbose=False):
         # Randomize a start point and n landmarks while keeping the scenario still
         if(seed is not None):
             seed = time.time() * 1000 % 65536
         numpy.random.seed(seed)
         n = task["cell_walls"].shape[0]
+
         def idx_trans(idx):
             return (idx // n, idx % n)
 
@@ -197,6 +208,11 @@ class MazeTaskManager(object):
         new_task["landmarks_coordinates"] = landmarks
         new_task["cell_landmarks"] = cell_landmarks
         new_task["commands_sequence"] = commands_sequence
+
+        if(verbose):
+            print("\n\n-------Successfully Resample Task-------\n")
+            print(dict_formatter(task))
+            print("\n----------------------------------------\n\n")
 
         return new_task
 
