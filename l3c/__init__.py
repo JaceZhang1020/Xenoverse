@@ -14,4 +14,4 @@
 
 
 def make_env(env_id, **kwargs):
-    raise Exception("metagym.make_env is deprecated. Please do \"import metagym.xxxenv\" and use gym.make instead")
+    raise Exception("l3c.make_env is deprecated. Please do \"import l3c.xxxenv\" and use gym.make instead")

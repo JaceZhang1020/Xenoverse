@@ -7,9 +7,11 @@ L3C provides variant environments facilitating In-Context Learning, featured in 
 
 # Environments Updating
 
-- [MazeWorld](l3c/mazeworld): 2D/3D maze generators for task generalization
+- [AnyMDP](l3c/anymdp): Procedurally generated unlimited general-purpose Markov Decision Processes (MDP)
 
-- [MetaLanguage](l3c/metalang): Pseudo-language generated from randomized hyper-parameters
+- [MetaLanguage](l3c/metalang): Pseudo-language generated from randomized neural networks
+
+- [MazeWorld](l3c/mazeworld): Procedurally generated mazes with diverse maze structures, navigation goals to benchmark object navigation
 
 - [L3C_Baselines](https://github.com/FutureAGI/L3C_Baselines): An implementation of the baseline solutions to the above tasks
 

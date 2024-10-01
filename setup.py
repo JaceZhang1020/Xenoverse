@@ -15,7 +15,7 @@
 import io
 from setuptools import setup, find_packages
 
-__version__ = '0.2.0.0'
+__version__ = '0.2.1.0'
 
 with io.open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
@@ -25,7 +25,7 @@ setup(
     version=__version__,
     author='WorldEditors',
     author_email='',
-    description=('L3C provide abundant environments for Lifelong Learning (L3) in Context.'),
+    description=('Benchmarks for Lifelong In-Context Learning'),
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/FutureAGI/L3C',
@@ -34,10 +34,6 @@ setup(
               if package.startswith('l3c')],
     package_data={'l3c': [
         './mazeworld/envs/img/*',
-        './lococrowds/envs/assets/ants/*.xml',
-        './lococrowds/envs/assets/humanoids/*.xml',
-        './lococrowds/envs/assets/scenes/*',
-        './lococrowds/envs/assets/*.png',
         ]
     },
     python_requires='>=3.7',

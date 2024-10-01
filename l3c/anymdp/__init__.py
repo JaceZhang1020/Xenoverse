@@ -13,12 +13,12 @@
 # limitations under the License.
 
 from gym.envs.registration import register
-from metagym.bandits.bandits_env import Bandits
+from l3c.anymdp.anymdp_env import AnyMDPEnv
+from l3c.anymdp.anymdp_solver import AnyMDPSolver
+from l3c.anymdp.task_sampler import AnyMDPTaskSampler, Resampler
 
 register(
-    id='bandits-v0',
-    entry_point='metagym.bandits:Bandits',
-    kwargs={"arms": 50,
-        "max_steps": 1000,
-    }
+    id='anymdp-v0',
+    entry_point='l3c.anymdp:AnyMDPEnv',
+    kwargs={"max_steps": 5000}
 )
