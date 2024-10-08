@@ -208,7 +208,7 @@ class SmartSLAMAgent(AgentBase):
             d_x2 = path[1][0] + 0.5 - self._cur_grid_float[0]
             d_y2 = path[1][1] + 0.5 - self._cur_grid_float[1]
             deta_s2 = numpy.sqrt(d_x2 ** 2 + d_y2 ** 2)
-            if(deta_s + cost_map[*path[0]] > deta_s2 + cost_map[*path[1]] and deta_s < 0.2):
+            if(deta_s + cost_map[path[0][0], path[0][1]] > deta_s2 + cost_map[path[1][0], path[1][1]] and deta_s < 0.2):
                 del path[0]
         return path
 

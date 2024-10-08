@@ -33,8 +33,8 @@ env = gym.make("anymdp-v0", max_steps=5000)
 from l3c.anymdp import AnyMDPTaskSampler
 
 task = AnyMDPTaskSampler(
-        state_space=10, # number of states
-        action_space=4, # number of actions
+        state_space=8, # number of states
+        action_space=5, # number of actions
         state_sparsity=0.5, # transition matrix sparsity
         reward_sparsity=0.5, # reward matrix sparsity
         )
@@ -49,14 +49,33 @@ from l3c.anymdp import Resampler
 new_task = Resampler(task)
 ```
 
-## Running the built-in MDP solver as an ideal teacher
+## Running the built-in MDP solver
 ```python
-from l3c.anymdp import AnyMDPSolver
+from l3c.anymdp import AnyMDPSolverOpt
 
-solver = AnyMDPSolver(env)  # AnyMDPSolver will automatically use Value Iteration to solve for optimal policy
+solver = AnyMDPSolverOpt(env)  # AnyMDPSolverOpt solves the MDP with ground truth rewards and transition matrix
 state, info = env.reset()
 done = False
 while not done:
     action = solver.policy(state)
     state, reward, done, info = env.step(action)
+```
+
+In case you do not want the ground truth rewards and transition to be leaked to the agent, use the AnyMDPSolverQ instead. This solver inplement a ideal environment modeling and a planning-based policy.
+
+```
+from l3c.anymdp import AnyMDPSolverQ, AnyMDPSolverMBRL
+
+ # AnyMDPSolverQ solves the MDP with Table Q-Learning, without seeing the ground truth rewards and transition
+solver = AnyMDPSolverQ(env) 
+
+# AnyMDPSolverMBRL solves the MDP with Ideal Environment Modeling and Planning, without seeing the ground truth rewards and transition
+#solver = AnyMDPSolverMBRL(env) 
+
+state, info = env.reset()
+done = False
+while not done:
+    action = solver.policy(state)
+    state, reward, done, info = env.step(action)
+    solver.learner(state, action, next_state, reward, done) # update the learner
 ```

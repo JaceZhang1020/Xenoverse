@@ -19,8 +19,8 @@ def irwin_hall(n:int, N:int):
     random.shuffle(val)
     return val
 
-def AnyMDPTaskSampler(state_space:int=10, 
-                 action_space:int=4, 
+def AnyMDPTaskSampler(state_space:int=8, 
+                 action_space:int=5, 
                  reward_sparsity=0.50,
                  transition_sparsity = 0.50,
                  seed=None):
@@ -33,7 +33,7 @@ def AnyMDPTaskSampler(state_space:int=10,
     transition_matrix = numpy.zeros((state_space, action_space, state_space))
     reward_matrix = numpy.zeros((state_space, action_space))
     
-    n = min(max(2, int(transition_sparsity * state_space)), state_space)
+    n = min(max(1, int(transition_sparsity * state_space)), state_space)
     for i in range(state_space):
         for j in range(action_space):
             transition = irwin_hall(n, state_space)
@@ -65,7 +65,7 @@ def Resampler(task, seed=None, reward_sparsity=0.5):
     # Reward Can not be too sparse
     reward_sparsity = max(6 / (state_space*action_space), reward_sparsity)
     reward_sparsity = min(reward_sparsity, 1.0)
-    reward_mask = random.binomial(1, task['reward_sparsity'], size=(state_space, action_space))
+    reward_mask = random.binomial(1, reward_sparsity, size=(state_space, action_space))
     reward_matrix = numpy.clip(
         random.normal(loc=0, scale=1.0, size=(state_space, action_space)),
         -1.0, 1.0) * reward_mask

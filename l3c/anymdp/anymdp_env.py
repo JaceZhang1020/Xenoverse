@@ -25,8 +25,8 @@ class AnyMDPEnv(gym.Env):
 
         assert ns1 == ns2 == ns3, "Transition matrix and reward matrix must have the same number of states"
         assert na1 == na2, "Transition matrix and reward matrix must have the same number of actions"
-        assert ns1 > 2, "State space must be at least 2"
-        assert na1 > 2, "Action space must be at least 2"
+        assert ns1 > 0, "State space must be at least 1"
+        assert na1 > 1, "Action space must be at least 2"
 
         self.observation_space = spaces.Discrete(ns1)
         self.action_space = spaces.Discrete(na1)
@@ -42,7 +42,7 @@ class AnyMDPEnv(gym.Env):
         
         self.steps = 0
         self.need_reset = False
-        self._state = random.randint(0, self.n_states - 1)
+        self._state = random.randint(0, self.n_states)
         return self._state, {"steps": self.steps}
 
     def step(self, action):
