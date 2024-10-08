@@ -22,5 +22,5 @@ from l3c.anymdp.task_sampler import AnyMDPTaskSampler, Resampler
 register(
     id='anymdp-v0',
     entry_point='l3c.anymdp:AnyMDPEnv',
-    kwargs={"max_steps": 5000}
+    kwargs={"max_steps": 5000},
 )

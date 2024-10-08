@@ -5,11 +5,13 @@ from numba import njit
 
 
 @njit(cache=True)
-def update_value_matrix(r_mat, t_mat, gamma, vm):
+def update_value_matrix(r_mat, t_mat, gamma, vm, max_iteration=-1):
     diff = 1.0
     cur_vm = numpy.copy(vm)
     ns, na = r_mat.shape
-    while diff > 1.0e-4:
+    iteration = 0
+    while diff > 1.0e-4 and (max_iteration < 0 or max_iteration > iteration):
+        iteration += 1
         old_vm = numpy.copy(cur_vm)
         for s in range(ns):
             for a in range(na):

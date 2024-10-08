@@ -23,12 +23,19 @@ def AnyMDPTaskSampler(state_space:int=8,
                  action_space:int=5, 
                  reward_sparsity=0.50,
                  transition_sparsity = 0.50,
+                 reward_noise_max=0.40,
+                 reward_noise_type=None,
                  seed=None):
     # Sampling Transition Matrix and Reward Matrix based on Irwin-Hall Distribution and Gaussian Distribution
     if(seed is not None):
         random.seed(seed)
     else:
         random.seed(int(time.time() * 32 + 12345) % 65535)
+
+    if(reward_noise_type not in ['binomial', 'normal', None]):
+        raise ValueError('Reward type must be either binomial or normal')
+    if(reward_noise_type is None):
+        reward_noise_type = random.choice(['binomial', 'normal'])
 
     transition_matrix = numpy.zeros((state_space, action_space, state_space))
     reward_matrix = numpy.zeros((state_space, action_space))
@@ -47,8 +54,9 @@ def AnyMDPTaskSampler(state_space:int=8,
     reward_matrix = numpy.clip(
         random.normal(loc=0, scale=1.0, size=(state_space, action_space)),
         -1.0, 1.0) * reward_mask
+    reward_noise = random.random() * reward_noise_max
     
-    return {'transition': transition_matrix, 'reward': reward_matrix}
+    return {'transition': transition_matrix, 'reward': reward_matrix, 'reward_noise': reward_noise, 'reward_noise_type': reward_noise_type}
 
 def Resampler(task, seed=None, reward_sparsity=0.5):
     # Sampling Transition Matrix and Reward Matrix based on Irwin-Hall Distribution and Gaussian Distribution
@@ -70,4 +78,4 @@ def Resampler(task, seed=None, reward_sparsity=0.5):
         random.normal(loc=0, scale=1.0, size=(state_space, action_space)),
         -1.0, 1.0) * reward_mask
     
-    return {'transition': transition_matrix, 'reward': reward_matrix}
+    return {'transition': transition_matrix, 'reward': reward_matrix, 'reward_noise': task['reward_noise'], 'reward_noise_type': task['reward_noise_type']}

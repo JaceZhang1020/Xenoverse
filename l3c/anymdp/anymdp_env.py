@@ -19,6 +19,8 @@ class AnyMDPEnv(gym.Env):
     def set_task(self, task_config):
         self.transition_matrix = task_config["transition"]
         self.reward_matrix = task_config["reward"]
+        self.reward_noise = task_config["reward_noise"]
+        self.reward_noise_type = task_config["reward_noise_type"]
 
         ns1, na1, ns2 = self.transition_matrix.shape
         ns3, na2 = self.reward_matrix.shape
@@ -52,10 +54,13 @@ class AnyMDPEnv(gym.Env):
         transition_gt = self.transition_matrix[self._state, action]
         reward_gt = self.reward_matrix[self._state, action]
         next_state = random.choice(self.n_states, p=transition_gt)
-        if(reward_gt > 0):
-            reward = random.binomial(1, reward_gt)
-        else:
-            reward = - random.binomial(1, abs(reward_gt))
+        if(self.reward_noise_type == 'normal'):
+            reward = random.normal(reward_gt, self.reward_noise)
+        elif(self.reward_noise_type == 'binomial'):
+            if(reward_gt > 0):
+                reward = random.binomial(1, reward_gt)
+            else:
+                reward = - random.binomial(1, abs(reward_gt))
 
         info = {"steps": self.steps, "transition_gt": transition_gt, "reward_gt": reward_gt}
         self.steps += 1

@@ -40,7 +40,7 @@ class AnyMDPSolverMBRL(object):
         est_t = self.est_t / numpy.sum(self.est_t, axis=-1, keepdims=True)
 
         # Update the value matrix
-        self.value_matrix = update_value_matrix(self.est_r, est_t, self.gamma, self.value_matrix)
+        self.value_matrix = update_value_matrix(self.est_r, est_t, self.gamma, self.value_matrix, max_iteration=3)
 
     def policy(self, state):
         # Apply UCB-H exploration strategy
