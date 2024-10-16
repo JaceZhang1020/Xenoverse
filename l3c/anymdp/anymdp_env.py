@@ -53,9 +53,10 @@ class AnyMDPEnv(gym.Env):
         assert action < self.n_actions, "Action must be less than the number of actions"
         transition_gt = self.transition_matrix[self._state, action]
         reward_gt = self.reward_matrix[self._state, action]
+        reward_gt_noise = self.reward_noise[self._state, action]
         next_state = random.choice(self.n_states, p=transition_gt)
         if(self.reward_noise_type == 'normal'):
-            reward = random.normal(reward_gt, self.reward_noise)
+            reward = random.normal(reward_gt, reward_gt_noise)
         elif(self.reward_noise_type == 'binomial'):
             if(reward_gt > 0):
                 reward = random.binomial(1, reward_gt)

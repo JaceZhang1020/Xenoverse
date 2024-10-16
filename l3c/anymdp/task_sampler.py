@@ -19,11 +19,32 @@ def irwin_hall(n:int, N:int):
     random.shuffle(val)
     return val
 
-def AnyMDPTaskSampler(state_space:int=8, 
+def reward_sampler(state_space:int, 
+                   action_space:int, 
+                   reward_sparsity:float,
+                   positive_ratio:float,
+                   reward_noise_max:float, 
+                   reward_type='binomial'):
+    reward_mask = numpy.zeros((state_space, action_space))
+    while numpy.sum(reward_mask) < 1:
+        reward_sparsity = min(reward_sparsity, 1.0)
+        reward_sparsity = random.random() * reward_sparsity
+        reward_sparsity = max(1 / (state_space*action_space), reward_sparsity) # prevent all-zeros
+        reward_mask = random.binomial(1, reward_sparsity, size=(state_space, action_space))
+    reward_noise = reward_noise_max * random.rand(state_space, action_space)
+
+    sign_mask = 2.0 * random.binomial(1, positive_ratio, size=(state_space, action_space)) - 1
+    reward_matrix = numpy.abs(random.normal(loc=0, scale=1.0, size=(state_space, action_space))) * reward_mask * sign_mask
+    if(reward_type == 'binomial'):
+        reward_matrix = numpy.clip(reward_matrix, -1.0, 1.0)
+    return reward_matrix, reward_noise
+
+def AnyMDPTaskSampler(state_space:int=8,
                  action_space:int=5, 
-                 reward_sparsity=0.50,
-                 transition_sparsity = 0.50,
-                 reward_noise_max=0.40,
+                 max_reward_sparsity=0.03,
+                 max_positive_reward_ratio=0.50,
+                 transition_sparsity = 0.10,
+                 reward_noise_max=0.30,
                  reward_noise_type=None,
                  seed=None):
     # Sampling Transition Matrix and Reward Matrix based on Irwin-Hall Distribution and Gaussian Distribution
@@ -41,24 +62,27 @@ def AnyMDPTaskSampler(state_space:int=8,
     reward_matrix = numpy.zeros((state_space, action_space))
     
     n = min(max(1, int(transition_sparsity * state_space)), state_space)
+
     for i in range(state_space):
         for j in range(action_space):
-            transition = irwin_hall(n, state_space)
+            fn = max(1, int(random.random() * n))  # make sparsity more random
+            transition = irwin_hall(fn, state_space)
             transition /= sum(transition)
             transition_matrix[i][j] = transition
     
     # Reward Can not be too sparse
-    reward_sparsity = max(6 / (state_space*action_space), reward_sparsity)
-    reward_sparsity = min(reward_sparsity, 1.0)
-    reward_mask = random.binomial(1, reward_sparsity, size=(state_space, action_space))
-    reward_matrix = numpy.clip(
-        random.normal(loc=0, scale=1.0, size=(state_space, action_space)),
-        -1.0, 1.0) * reward_mask
-    reward_noise = random.random() * reward_noise_max
+    reward_matrix, reward_noise = reward_sampler(state_space, action_space, 
+                                                 max_reward_sparsity,
+                                                 random.random() * max_positive_reward_ratio,
+                                                 reward_noise_max, 
+                                                 reward_noise_type)
     
-    return {'transition': transition_matrix, 'reward': reward_matrix, 'reward_noise': reward_noise, 'reward_noise_type': reward_noise_type}
+    return {'transition': transition_matrix, 
+            'reward': reward_matrix, 
+            'reward_noise': reward_noise, 
+            'reward_noise_type': reward_noise_type}
 
-def Resampler(task, seed=None, reward_sparsity=0.5):
+def Resampler(task, seed=None, max_reward_sparsity=0.03, max_positive_reward_ratio=0.50, reward_noise_max=0.30):
     # Sampling Transition Matrix and Reward Matrix based on Irwin-Hall Distribution and Gaussian Distribution
     if(seed is not None):
         random.seed(seed)
@@ -71,11 +95,14 @@ def Resampler(task, seed=None, reward_sparsity=0.5):
     reward_matrix = numpy.zeros((state_space, action_space))
     
     # Reward Can not be too sparse
-    reward_sparsity = max(6 / (state_space*action_space), reward_sparsity)
-    reward_sparsity = min(reward_sparsity, 1.0)
-    reward_mask = random.binomial(1, reward_sparsity, size=(state_space, action_space))
-    reward_matrix = numpy.clip(
-        random.normal(loc=0, scale=1.0, size=(state_space, action_space)),
-        -1.0, 1.0) * reward_mask
-    
-    return {'transition': transition_matrix, 'reward': reward_matrix, 'reward_noise': task['reward_noise'], 'reward_noise_type': task['reward_noise_type']}
+    reward_matrix, reward_noise = reward_sampler(state_space, 
+                                                 action_space, 
+                                                 max_reward_sparsity, 
+                                                 random.random() * max_positive_reward_ratio,
+                                                 reward_noise_max,
+                                                 task['reward_noise_type'])
+
+    return {'transition': transition_matrix, 
+            'reward': reward_matrix, 
+            'reward_noise': task['reward_noise'], 
+            'reward_noise_type': task['reward_noise_type']}

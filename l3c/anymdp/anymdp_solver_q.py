@@ -36,10 +36,10 @@ class AnyMDPSolverQ(object):
         error = target - self.value_matrix[s][a]
         self.value_matrix[s][a] += self.alpha * error
         self.sa_vistied[s][a] += 1
+        self.step += 1
 
 
     def policy(self, state):
         # Apply UCB-H exploration strategy
-        self.step += 1
-        values = self._c * numpy.sqrt(numpy.log(self.step) / numpy.clip(self.sa_vistied[state], 1.0, 1.0e+8))  + self.value_matrix[state]
+        values = self._c * numpy.sqrt(numpy.log(self.step + 1) / numpy.clip(self.sa_vistied[state], 1.0, 1.0e+8))  + self.value_matrix[state]
         return numpy.argmax(values)
