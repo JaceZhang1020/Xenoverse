@@ -39,7 +39,19 @@ def reward_sampler(state_space:int,
         reward_matrix = numpy.clip(reward_matrix, -1.0, 1.0)
     return reward_matrix, reward_noise
 
-def AnyMDPTaskSampler(state_space:int=8,
+def pseudo_random_seed():
+    # 获取当前时间戳，精确到微秒
+    timestamp = time.time_ns()
+    
+    # 使用系统随机数生成器生成一个随机数
+    system_random = int(random.random() * 1000000000)
+    
+    # 将时间戳和系统随机数结合，产生一个伪随机数
+    pseudo_random = timestamp + system_random
+    
+    return pseudo_random % (4294967296)
+
+def AnyMDPTaskSampler(state_space:int=128,
                  action_space:int=5, 
                  max_reward_sparsity=0.03,
                  max_positive_reward_ratio=0.50,
@@ -51,7 +63,7 @@ def AnyMDPTaskSampler(state_space:int=8,
     if(seed is not None):
         random.seed(seed)
     else:
-        random.seed(int(time.time() * 32 + 12345) % 65535)
+        random.seed(pseudo_random_seed())
 
     if(reward_noise_type not in ['binomial', 'normal', None]):
         raise ValueError('Reward type must be either binomial or normal')
