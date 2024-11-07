@@ -8,6 +8,7 @@ from numpy import random
 
 from gym import error, spaces, utils
 from gym.utils import seeding
+from l3c.utils import pseudo_random_seed
 
 class AnyMDPEnv(gym.Env):
     def __init__(self, max_steps:int=5000):
@@ -44,6 +45,7 @@ class AnyMDPEnv(gym.Env):
         
         self.steps = 0
         self.need_reset = False
+        random.seed(pseudo_random_seed())
         self._state = random.randint(0, self.n_states)
         return self._state, {"steps": self.steps}
 

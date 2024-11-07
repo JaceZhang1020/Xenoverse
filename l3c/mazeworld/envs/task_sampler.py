@@ -10,6 +10,7 @@ from numpy import random as npyrnd
 from numpy.linalg import norm
 from copy import deepcopy
 from l3c.mazeworld.envs.grid_ops import genmaze_by_primwall
+from l3c.utils import pseudo_random_seed
 
 
 def gentext(cell_walls, textlib_walls, textlib_grounds, textlib_ceilings):
@@ -105,7 +106,9 @@ class MazeTaskManager(object):
             verbose=False):
         # Initialize the maze ...
         if(seed is not None):
-            seed = time.time() * 1000 % 65536
+            numpy.random.seed(seed)
+        else:
+            numpy.random.seed(pseudo_random_seed())
         numpy.random.seed(seed)
 
         cell_size = random.uniform(*cell_size_range)

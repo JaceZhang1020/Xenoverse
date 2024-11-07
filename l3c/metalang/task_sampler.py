@@ -17,6 +17,7 @@ import _io
 import numpy
 import gym
 from numpy import random
+from l3c.utils import pseudo_random_seed
 
 
 def TaskSamplerV2(seed=None,
@@ -27,6 +28,8 @@ def TaskSamplerV2(seed=None,
                 _lambda=5.0):
     if(seed is not None):
         numpy.random.seed(seed)
+    else:
+        numpy.random.seed(pseudo_random_seed())
     if(isinstance(n_gram, list)):
         n_gram = random.choice(n_gram)
     word_emb = numpy.random.normal(0, 1.0, size=(n_vocab, n_emb))
@@ -55,6 +58,8 @@ def TaskSamplerV1(seed=None,
     patterns = []
     if(seed is not None):
         numpy.random.seed(seed)
+    else:
+        numpy.random.seed(pseudo_random_seed())
     if(isinstance(n_gram, list)):
         n_gram = random.choice(n_gram)
     for _ in range(n_patterns):

@@ -96,7 +96,7 @@ while not done:
     maze_env.render()
 ```
 
-## Using the build-in agents
+## Using the built-in agents
 
 We implement a smart agent with simulated SLAM and planning abilities. It can effectively employ a Exploration-then-Exploitation strategy to explore the environment and navigate to the target. Notice that the agent can be used as high-level baseline and teacher for generating trajectories efficiently, but it is not guarranteed to be achieve global optimal performance.
 
