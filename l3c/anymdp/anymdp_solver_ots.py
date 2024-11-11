@@ -10,7 +10,7 @@ class AnyMDPSolverOTS(object):
         episodic reinforcement learning." 
         Uncertainty in Artificial Intelligence. PMLR, 2023.
     """
-    def __init__(self, env, gamma=0.98, c=4.0e-3, alpha=0.05):
+    def __init__(self, env, gamma=0.99, c=5.0e-3, alpha=0.10):
         """
         The constructor for the class AnyMDPSolverQ
         The exploration strategy is controlled by UCB-H with c as its hyperparameter. Increasing c will encourage exploration
@@ -69,6 +69,6 @@ class AnyMDPSolverOTS(object):
         # Apply UCB-H exploration strategy
         #print(self.value_matrix[state])
         values = self._c * numpy.sqrt(numpy.log(self.step + 1) / numpy.clip(self.est_r_cnt[state], 1.0, None)) * \
-                numpy.max(numpy.random.normal(self.n_actions), 0) + \
+                numpy.maximum(numpy.random.randn(self.n_actions), 0) + \
                 self.value_matrix[state]
         return numpy.argmax(values)
