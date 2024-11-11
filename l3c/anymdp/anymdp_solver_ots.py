@@ -10,7 +10,7 @@ class AnyMDPSolverOTS(object):
         episodic reinforcement learning." 
         Uncertainty in Artificial Intelligence. PMLR, 2023.
     """
-    def __init__(self, env, gamma=0.99, c=5.0e-3, alpha=0.10):
+    def __init__(self, env, gamma=0.99, c=5.0e-3, alpha=0.10, max_steps=4000):
         """
         The constructor for the class AnyMDPSolverQ
         The exploration strategy is controlled by UCB-H with c as its hyperparameter. Increasing c will encourage exploration
@@ -29,7 +29,7 @@ class AnyMDPSolverOTS(object):
         self.gamma = gamma
         self.lr = 1.0 - alpha
         self._c = c / (1.0 - self.gamma)
-        self.step = 0
+        self.max_steps = max_steps
 
         self.value_matrix = numpy.zeros((self.n_states, self.n_actions))
         self.est_r_global_avg = 0
@@ -61,14 +61,11 @@ class AnyMDPSolverOTS(object):
         else:
             est_value = self.est_r[s,a]
         self.value_matrix[s,a] += self.alpha * (est_value - self.value_matrix[s,a])
-    
-        # Update the value matrix
-        self.step += 1
+
 
     def policy(self, state):
-        # Apply UCB-H exploration strategy
-        #print(self.value_matrix[state])
-        values = self._c * numpy.sqrt(numpy.log(self.step + 1) / numpy.clip(self.est_r_cnt[state], 1.0, None)) * \
+        # Apply UCB with dynamic noise (Thompson Sampling)
+        values = self._c * numpy.sqrt(numpy.log(self.max_steps + 1) / numpy.clip(self.est_r_cnt[state], 1.0, None)) * \
                 numpy.maximum(numpy.random.randn(self.n_actions), 0) + \
                 self.value_matrix[state]
         return numpy.argmax(values)
