@@ -11,10 +11,13 @@ from gym.utils import seeding
 from l3c.utils import pseudo_random_seed
 
 class AnyMDPEnv(gym.Env):
-    def __init__(self, max_steps:int=5000):
-        self.max_steps = max_steps
+    def __init__(self, max_steps):
+        """
+        Pay Attention max_steps might be reseted by task settings
+        """
         self.observation_space = spaces.Discrete(2)
         self.action_space = spaces.Discrete(2)
+        self.max_steps = max_steps
         self.task_set = False
 
     def set_task(self, task_config):
@@ -22,6 +25,8 @@ class AnyMDPEnv(gym.Env):
         self.reward_matrix = task_config["reward"]
         self.reward_noise = task_config["reward_noise"]
         self.reward_noise_type = task_config["reward_noise_type"]
+        if("max_steps" in task_config):
+            self.max_steps = task_config["max_steps"]
 
         ns1, na1, ns2 = self.transition_matrix.shape
         ns3, na2 = self.reward_matrix.shape

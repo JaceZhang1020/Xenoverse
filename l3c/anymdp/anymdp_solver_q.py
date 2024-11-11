@@ -1,14 +1,12 @@
 import gym
 import numpy
 from numpy import random
-from l3c.anymdp.anymdp_solver_opt import update_value_matrix
-
 
 class AnyMDPSolverQ(object):
     """
     Solver for AnyMDPEnv with Q-Learning
     """
-    def __init__(self, env, gamma=0.98, alpha=0.01, c=0.02):
+    def __init__(self, env, gamma=0.98, alpha=0.01, c=4.0e-3):
         """
         The constructor for the class AnyMDPSolverQ
         The exploration strategy is controlled by UCB-H with c as its hyperparameter. Increasing c will encourage exploration
@@ -41,5 +39,7 @@ class AnyMDPSolverQ(object):
 
     def policy(self, state):
         # Apply UCB-H exploration strategy
-        values = self._c * numpy.sqrt(numpy.log(self.step + 1) / numpy.clip(self.sa_vistied[state], 1.0, 1.0e+8))  + self.value_matrix[state]
+        values = self._c * numpy.sqrt(numpy.log(self.step + 1) / numpy.clip(self.sa_vistied[state], 1.0, None)) * \
+                numpy.max(numpy.random.normal(self.n_actions), 0) + \
+                self.value_matrix[state]
         return numpy.argmax(values)
