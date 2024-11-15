@@ -30,9 +30,6 @@ class AnyMDPEnv(gym.Env):
         self.reset_states = task_config["reset_states"]
         self.n_states = task_config["state_space"]
         self.n_actions = task_config["action_space"]
-        
-        #print("-----------transitions-----------", self.transition_matrix)
-        #print("-----------rewards-----------", self.reward_matrix)
 
         if("max_steps" in task_config):
             self.max_steps = task_config["max_steps"]
@@ -81,9 +78,9 @@ class AnyMDPEnv(gym.Env):
             reward = random.normal(reward_gt, reward_gt_noise)
         elif(self.reward_noise_type == 'binomial'):
             if(reward_gt > 0):
-                reward = random.binomial(1, reward_gt)
+                reward = float(random.binomial(1, reward_gt))
             else:
-                reward = - random.binomial(1, abs(reward_gt))
+                reward = - float(random.binomial(1, abs(reward_gt)))
         transition_ext_gt = numpy.zeros((self.n_states,))
         for i,s in enumerate(self.state_mapping):
             transition_ext_gt[s] = transition_gt[i]
@@ -101,3 +98,7 @@ class AnyMDPEnv(gym.Env):
     @property
     def state(self):
         return self.state_mapping[self._state]
+    
+    @property
+    def inner_state(self):
+        return self._state

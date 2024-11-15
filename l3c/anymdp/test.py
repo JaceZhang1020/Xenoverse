@@ -5,7 +5,7 @@ if __name__=="__main__":
     env = gym.make("anymdp-v0")
     task = AnyMDPTaskSampler(state_space=64, 
                              action_space=5,
-                             min_state_space=16)
+                             min_state_space=1)
     prt_freq = 1000
     env.set_task(task)
     max_steps = 32000

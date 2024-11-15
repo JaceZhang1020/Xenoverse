@@ -31,6 +31,9 @@ def update_value_matrix(t_mat, r_mat, gamma, vm, max_iteration=-1, is_greedy=Tru
 
 def get_final_transition(**task):
     t_mat = numpy.copy(task["transition"])
+    if(t_mat.shape[0] < 2):
+        return t_mat
+    
     reset_dist = task["reset_states"]
     reset_trigger = numpy.where(task["reset_triggers"] > 0)
 
@@ -41,6 +44,8 @@ def get_final_transition(**task):
 
 def get_final_reward(**task):
     r_mat = numpy.copy(task["reward"])
+    if(r_mat.shape[0] < 2):
+        return r_mat
     reset_trigger = numpy.where(task["reset_triggers"] > 0)
 
     r_mat[reset_trigger, :, :] = 0.0
@@ -65,6 +70,8 @@ def check_transition(t_mat):
     ss_unreach = numpy.sum(ss_trans < 1.0e-6, axis=1)
     if(numpy.any(ss_unreach > 0)):
         return 0
+    if(ns < 4):
+        return 1 # where states below 4, transition is all ok as long as strongly connected
     return quality
 
 def check_valuefunction(t_mat, r_mat):
@@ -120,9 +127,9 @@ def check_task_trans(task):
        not "reset_states" in task or
        not "reset_triggers" in task):
         return -1
-    t_mat = get_final_transition(**task)
-    if(t_mat.shape[0] < 2): # For bandit problem, no need to check
+    if(task["transition"].shape[0] < 2):
         return 1
+    t_mat = get_final_transition(**task)
     return check_transition(t_mat)
 
 
@@ -142,6 +149,7 @@ def check_task_rewards(task):
        not "reset_triggers" in task or 
        not "reward" in task):
         return -100
+
     t_mat = get_final_transition(**task)
     r_mat = get_final_reward(**task)
     return check_valuefunction(t_mat, r_mat)

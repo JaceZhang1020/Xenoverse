@@ -43,8 +43,16 @@ def reward_sampler(task:dict,
 
     if("reset_triggers_positive" not in task):
         return {}
-    
+
     reward_scale = random.uniform(0.01, 0.10) # Scale the reward noise
+    reward_noise_type = random.choice(['binomial', 'normal'])
+
+    if(state_space < 2):
+        reward_matrix = numpy.random.random((1, action_space, 1)) * reward_scale
+        reward_noise = 0.3 * numpy.random.random((1, action_space, 1)) * reward_scale
+        return {"reward": reward_matrix,
+                "reward_noise": reward_noise,
+                "reward_noise_type": reward_noise_type}
 
     # Sample Pitfalls
     n = int(2 * numpy.sqrt(state_space))
@@ -87,7 +95,6 @@ def reward_sampler(task:dict,
         r_direction = numpy.sum(r_direction, axis=1)
         reward_matrix += r_direction[None, None, :] - r_direction[:, None, None]
 
-    reward_noise_type = random.choice(['binomial', 'normal'])
     if(numpy.max(reward_matrix) > 1.01 or numpy.min(reward_matrix) < -1.01):
         reward_noise_type = 'normal'
     else:
@@ -107,8 +114,20 @@ def transition_sampler(state_space:int,
             min_state_space = state_space
         else:
             min_state_space = min(min_state_space, state_space)
-        sample_state_space = random.randint(min_state_space, state_space + 1)
+        sample_state_space = random.randint(min_state_space, state_space + 1)        
         state_mapping = numpy.random.permutation(state_space)[:sample_state_space]
+
+        if(state_space < 1):
+            raise ValueError("State space must be at least 1")
+
+        if(state_space < 2):
+            return {"state_mapping": state_mapping,
+                    "reset_triggers": numpy.zeros((1,)),
+                    "reset_states": numpy.ones((1,)),
+                    "transition": numpy.ones((1, action_space, 1)),
+                    "reset_triggers_negative": None,
+                    "reset_triggers_positive": None,
+                    "state_embedding": None}
     
         # Sample the reset states
         eps = 1e-6
@@ -123,15 +142,9 @@ def transition_sampler(state_space:int,
         max_axis_length = random.randint(4, 16)
         loc_s[:, 0] *= max_axis_length
 
-        # Sample negative reset trigger - Uniform distribution
-        # A upperbound of 20% of the state triggers reset
-        reset_trigger_negative = numpy.random.binomial(1, 
-                                          0.2 * random.random(), 
-                                          size=(sample_state_space,))
-
         # Sample positive reset trigger and reset states
         iter = 0
-        max_iter = 1000
+        max_iter = 10000
         reset_trigger_positive = numpy.zeros(sample_state_space)
         reset_dist = numpy.zeros(sample_state_space)
         while(numpy.sum(reset_trigger_positive) < 1 
@@ -141,16 +154,13 @@ def transition_sampler(state_space:int,
             proc_s = loc_s[:, 0] / max_axis_length
             max_proc_s = numpy.max(proc_s) - eps
             min_proc_s = numpy.min(proc_s) + eps
-            max_proc_s_start = min(0.60, max_proc_s - 0.10)
-            min_proc_s_end  = max(0.40, min_proc_s + 0.10)
+            max_proc_s_start = min(0.60, max_proc_s - 0.20)
+            min_proc_s_end  = max(0.40, min_proc_s + 0.20)
 
             positive_prob = numpy.clip(proc_s - random.uniform(max_proc_s_start, max_proc_s), 0.0, 1.0)
             positive_prob *= max(1, 0.05 * random.random() * sample_state_space) / (numpy.sum(positive_prob) + eps) 
             positive_prob = numpy.clip(positive_prob, 0.0, 1.0)
             reset_trigger_positive = numpy.random.binomial(1, positive_prob)
-            reset_trigger_negative *= (1 - reset_trigger_positive)
-
-            reset_trigger = reset_trigger_negative + reset_trigger_positive
 
             # Sample the reset state distribution
             reset_prob = numpy.clip(random.uniform(min_proc_s, min_proc_s_end) - proc_s, 0.0, 1.0)
@@ -158,11 +168,21 @@ def transition_sampler(state_space:int,
             reset_prob = numpy.clip(reset_prob, 0.0, 1.0)
             if(numpy.sum(reset_prob) < 1):
                 reset_prob += eps
-            reset_dist = numpy.random.binomial(1, reset_prob).astype(float) * (1 - reset_trigger) # Avoid resetting to triggers
+            reset_dist = numpy.random.binomial(1, reset_prob).astype(float) * (1.0 - reset_trigger_positive) # Avoid resetting to triggers
+
+            # Sample negative reset trigger - Uniform distribution
+            # A upperbound of 20% of the state triggers reset
+            reset_trigger_negative = numpy.random.binomial(1, 
+                                            0.2 * random.random(), 
+                                            size=(sample_state_space,)) * \
+                                    (1.0 - reset_trigger_positive) * (1.0 - reset_dist)
+
+            reset_trigger = reset_trigger_positive + reset_trigger_negative
+
             iter += 1
 
-        if(iter > max_iter):
-            raise RuntimeError("Failed to sample a valid task, consider increasing the number of states")
+        if(iter >= max_iter):
+            raise RuntimeError("Failed to sample a valid task")
 
         reset_dist = reset_dist / numpy.sum(reset_dist)
 
@@ -246,7 +266,7 @@ def AnyMDPTaskSampler(state_space:int=128,
     qvf_max = -100
     best_task = None
 
-    while (qtrans < quality_threshold_transition or trans_step < 10) and trans_step < max_iteration:
+    while (qtrans < quality_threshold_transition) and trans_step < max_iteration:
         task.update(transition_sampler(state_space, 
                                        action_space,
                                        min_state_space,
@@ -258,7 +278,7 @@ def AnyMDPTaskSampler(state_space:int=128,
         trans_step += 1
     task = best_task
 
-    while (qvf < quality_threshold_valuefunction or vf_step < 10) and vf_step < max_iteration:
+    while (qvf < quality_threshold_valuefunction) and vf_step < max_iteration:
         substate_space = task["state_mapping"].shape[0]
         task.update(reward_sampler(task,
                                    substate_space, 
