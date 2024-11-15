@@ -10,7 +10,7 @@ class AnyMDPSolverOTS(object):
         episodic reinforcement learning." 
         Uncertainty in Artificial Intelligence. PMLR, 2023.
     """
-    def __init__(self, env, gamma=0.99, c=5.0e-3, alpha=0.10, max_steps=4000):
+    def __init__(self, env, gamma=0.99, c=0.01, alpha=0.10, max_steps=4000):
         """
         The constructor for the class AnyMDPSolverQ
         The exploration strategy is controlled by UCB-H with c as its hyperparameter. Increasing c will encourage exploration
@@ -20,8 +20,6 @@ class AnyMDPSolverOTS(object):
             raise Exception("AnyMDPEnv is not initialized by 'set_task', must call set_task first")
         self.n_actions = env.action_space.n
         self.n_states = env.observation_space.n
-        self.transition_matrix = env.transition_matrix
-        self.reward_matrix = env.reward_matrix
        
         self.est_r = numpy.zeros((self.n_states, self.n_actions))
         self.est_r_cnt = numpy.zeros((self.n_states, self.n_actions))
@@ -30,6 +28,9 @@ class AnyMDPSolverOTS(object):
         self.lr = 1.0 - alpha
         self._c = c / (1.0 - self.gamma)
         self.max_steps = max_steps
+        self.reset_states = numpy.zeros(self.n_states)
+        for i,s in enumerate(env.state_mapping):
+            self.reset_states[s] = env.reset_states[i]
 
         self.value_matrix = numpy.zeros((self.n_states, self.n_actions))
         self.est_r_global_avg = 0
@@ -59,7 +60,8 @@ class AnyMDPSolverOTS(object):
             est_target = numpy.sum(est_t[s, a] * numpy.max(self.value_matrix, axis=-1))
             est_value = self.est_r[s,a] + self.gamma * est_target
         else:
-            est_value = self.est_r[s,a]
+            est_target = numpy.sum(self.reset_states * numpy.max(self.value_matrix, axis=-1))
+            est_value = self.est_r[s,a] + self.gamma * est_target
         self.value_matrix[s,a] += self.alpha * (est_value - self.value_matrix[s,a])
 
 

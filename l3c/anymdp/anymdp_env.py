@@ -1,5 +1,5 @@
 """
-Gym Environment For Maze3D
+Gym Environment For Any MDP
 """
 import numpy
 import gym
@@ -25,22 +25,31 @@ class AnyMDPEnv(gym.Env):
         self.reward_matrix = task_config["reward"]
         self.reward_noise = task_config["reward_noise"]
         self.reward_noise_type = task_config["reward_noise_type"]
+        self.state_mapping = task_config["state_mapping"]
+        self.reset_triggers = task_config["reset_triggers"]
+        self.reset_states = task_config["reset_states"]
+        self.n_states = task_config["state_space"]
+        self.n_actions = task_config["action_space"]
+        
+        #print("-----------transitions-----------", self.transition_matrix)
+        #print("-----------rewards-----------", self.reward_matrix)
+
         if("max_steps" in task_config):
             self.max_steps = task_config["max_steps"]
 
         ns1, na1, ns2 = self.transition_matrix.shape
-        ns3, na2 = self.reward_matrix.shape
+        ns3, na2, ns4 = self.reward_matrix.shape
 
-        assert ns1 == ns2 == ns3, "Transition matrix and reward matrix must have the same number of states"
-        assert na1 == na2, "Transition matrix and reward matrix must have the same number of actions"
+        assert ns1 == ns2 and ns2 == ns3 and ns3==ns4, \
+            "Transition matrix and reward matrix must have the same number of states"
+        assert na1 == na2, \
+            "Transition matrix and reward matrix must have the same number of actions"
         assert ns1 > 0, "State space must be at least 1"
         assert na1 > 1, "Action space must be at least 2"
 
-        self.observation_space = spaces.Discrete(ns1)
-        self.action_space = spaces.Discrete(na1)
+        self.observation_space = spaces.Discrete(self.n_states)
+        self.action_space = spaces.Discrete(self.n_actions)
 
-        self.n_states = ns1
-        self.n_actions = na1
         self.task_set = True
         self.need_reset = True
 
@@ -51,17 +60,23 @@ class AnyMDPEnv(gym.Env):
         self.steps = 0
         self.need_reset = False
         random.seed(pseudo_random_seed())
-        self._state = random.randint(0, self.n_states)
-        return self._state, {"steps": self.steps}
+
+        self._state = numpy.random.choice(len(self.reset_states),
+                                          replace=True,
+                                          p=self.reset_states)
+        return self.state_mapping[self._state], {"steps": self.steps}
 
     def step(self, action):
         if(self.need_reset or not self.task_set):
             raise Exception("Must \"set_task\" and \"reset\" before doing any actions")
         assert action < self.n_actions, "Action must be less than the number of actions"
         transition_gt = self.transition_matrix[self._state, action]
-        reward_gt = self.reward_matrix[self._state, action]
-        reward_gt_noise = self.reward_noise[self._state, action]
-        next_state = random.choice(self.n_states, p=transition_gt)
+
+        next_state = random.choice(len(self.state_mapping), p=transition_gt)
+
+        reward_gt = self.reward_matrix[self._state, action, next_state]
+        reward_gt_noise = self.reward_noise[self._state, action, next_state]
+
         if(self.reward_noise_type == 'normal'):
             reward = random.normal(reward_gt, reward_gt_noise)
         elif(self.reward_noise_type == 'binomial'):
@@ -73,8 +88,13 @@ class AnyMDPEnv(gym.Env):
         info = {"steps": self.steps, "transition_gt": transition_gt, "reward_gt": reward_gt}
         self.steps += 1
         self._state = next_state
-        done = (self.steps >= self.max_steps)
+        #print("inner", next_state, "outer", self.state_mapping[next_state], self.max_steps,
+        #      "triggers", self.reset_triggers, "starts", self.reset_states)
+        done = (self.steps >= self.max_steps or self.reset_triggers[self._state])
         if(done):
             self.need_reset = True
-
-        return next_state, reward, done, info
+        return self.state_mapping[next_state], reward, done, info
+    
+    @property
+    def state(self):
+        return self.state_mapping[self._state]

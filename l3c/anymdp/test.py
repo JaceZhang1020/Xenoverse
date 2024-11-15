@@ -1,13 +1,12 @@
 if __name__=="__main__":
     import gym
-    from l3c.anymdp import AnyMDPEnv, AnyMDPSolverOpt, AnyMDPSolverOTS, AnyMDPSolverQ, AnyMDPTaskSampler, Resampler
+    from l3c.anymdp import AnyMDPEnv, AnyMDPSolverOpt, AnyMDPSolverOTS, AnyMDPSolverQ, AnyMDPTaskSampler
 
     env = gym.make("anymdp-v0")
-    task = AnyMDPTaskSampler(64, 5)
+    task = AnyMDPTaskSampler(32, 5)
     prt_freq = 1000
     env.set_task(task)
     max_steps = 32000
-    print(f"Task:\n{task}")
     # Test Random Policy
     state, info = env.reset()
     acc_reward = 0
@@ -47,6 +46,7 @@ if __name__=="__main__":
             epoch_reward = 0
         if(done):
             state, info = env.reset()
+            state_list = []
     print("Optimal Solver Summary:  {}".format(acc_reward))
 
     # Test AnyMDPSolverQ

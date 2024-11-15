@@ -3,15 +3,14 @@ import numpy
 from numpy import random
 from numba import njit
 import networkx as nx
-
+import scipy.stats as stats
 
 @njit(cache=True)
-def update_value_matrix(r_mat, t_mat, gamma, vm, max_iteration=-1):
+def update_value_matrix(t_mat, r_mat, gamma, vm, max_iteration=-1, is_greedy=True):
     diff = 1.0
     cur_vm = numpy.copy(vm)
-    ns, na = r_mat.shape
+    ns, na, _ = r_mat.shape
     iteration = 0
-
     while diff > 1.0e-4 and (
             (max_iteration < 0) or 
             (max_iteration > iteration and max_iteration > 1) or
@@ -22,54 +21,127 @@ def update_value_matrix(r_mat, t_mat, gamma, vm, max_iteration=-1):
             for a in range(na):
                 exp_q = 0.0
                 for sn in range(ns):
-                    exp_q += t_mat[s,a,sn] * numpy.max(cur_vm[sn])
-                cur_vm[s,a] = r_mat[s,a] + gamma * exp_q
+                    if(is_greedy):
+                        exp_q += t_mat[s,a,sn] * numpy.max(cur_vm[sn])
+                    else:
+                        exp_q += t_mat[s,a,sn] * numpy.mean(cur_vm[sn])
+                cur_vm[s,a] = numpy.dot(r_mat[s,a], t_mat[s,a]) + gamma * exp_q
         diff = numpy.sqrt(numpy.mean((old_vm - cur_vm)**2))
     return cur_vm
 
-def check_transition_quality(transition):
-    if(transition is None):
-        return False
+def get_final_transition(**task):
+    t_mat = numpy.copy(task["transition"])
+    reset_dist = task["reset_states"]
+    reset_trigger = numpy.where(task["reset_triggers"] > 0)
+
+    for s in reset_trigger:
+        t_mat[s, :] = reset_dist
+
+    return t_mat
+
+def get_final_reward(**task):
+    r_mat = numpy.copy(task["reward"])
+    reset_trigger = numpy.where(task["reset_triggers"] > 0)
+
+    r_mat[reset_trigger, :, :] = 0.0
+
+    return r_mat
+
+def check_transition(t_mat):
+    quality = -1
+    if(t_mat is None):
+        return quality
     # acquire state - to - state distribution
-    in_dist = numpy.sum(transition, axis=1)
+    ns = t_mat.shape[0]
+    log_ns = int(numpy.floor(numpy.log2(ns)))
+    ss_trans = numpy.sum(t_mat, axis=1)
+    ss_trans = ss_trans / numpy.sum(ss_trans, axis=1, keepdims=True)
 
-    in_graph = nx.DiGraph()
-    nodes = range(in_dist.shape[0])
-    in_graph.add_nodes_from(nodes)
-    for i in range(in_dist.shape[0]):
-        for j in range(in_dist.shape[1]):
-            if in_dist[i, j] != 0:
-                in_graph.add_edge(i, j, weight=in_dist[i, j])
+    for i in range(log_ns):
+        ss_trans = numpy.matmul(ss_trans, ss_trans)
+        ss_unreach = numpy.sum(ss_trans < 1.0e-6)
+        if(ss_unreach > 0):
+            quality = max(quality, i / log_ns + ss_unreach / ns / ns)
+    ss_unreach = numpy.sum(ss_trans < 1.0e-6, axis=1)
+    if(numpy.any(ss_unreach > 0)):
+        return 0
+    return quality
 
-    if(nx.is_strongly_connected(in_graph)):
-        return True
-    else:
-        print("AnyMDP: Sampling transition graph not strongly connected, need resample...")
-        return False
+def check_valuefunction(t_mat, r_mat):
+    if(t_mat is None or r_mat is None):
+        return -100
+    ns, na, _ = r_mat.shape
+    if(ns < 2): # For bandit problem, only check rewards
+        if(numpy.std(r_mat) > 1.0e-3):
+            return 1
+        else:
+            return -100
 
-def check_reward_quality(transition, reward):
-    if(transition is None or reward is None):
-        return False
-    ns, na = reward.shape
-    vm = update_value_matrix(reward, transition, 0.98, numpy.zeros((ns, na), dtype=float), max_iteration=2)
-    if(numpy.std(vm) > 1.0e-2 and numpy.min(vm) < 0 and numpy.max(vm) > 0):
-        return True
-    else:
-        print("AnyMDP: Sampling task has trivial value function, need resample...")
-        return False
+    vm_l = update_value_matrix(t_mat, r_mat, 0.99, numpy.zeros((ns, na), dtype=float), max_iteration=5)
+    vm_s = update_value_matrix(t_mat, r_mat, 0.70, numpy.zeros((ns, na), dtype=float), max_iteration=5)
+    vm_r = update_value_matrix(t_mat, r_mat, 0.99, numpy.zeros((ns, na), dtype=float), max_iteration=5, is_greedy=False)
 
-def check_task_quality(task):
+    vm_l = numpy.max(vm_l, axis=1)
+    vm_s = numpy.max(vm_s, axis=1)
+    vm_r = numpy.max(vm_r, axis=1)
+
+    vbase = numpy.sqrt(numpy.mean(vm_r ** 2))
+
+    corr_ls, _ = stats.spearmanr(vm_l, vm_s)
+    corr_lr, _ = stats.spearmanr(vm_l, vm_r)
+    qdelta = numpy.mean((vm_l - vm_r)) / vbase
+    qstd = numpy.std(vm_l) / vbase
+
+    if(qstd < 0.1): # value function too flat
+        return -100
+
+    if(numpy.isnan(corr_lr)):
+        corr_lr = 1
+    if(numpy.isnan(corr_ls)):
+        corr_ls = 1
+
+    quality = qstd + qdelta +  numpy.log(1 + 1.0e-8 - corr_lr) + numpy.log(1 + 1.0e-8 - corr_ls)
+
+    return quality
+
+
+def check_task_trans(task):
     """
     Check the quality of the task
-    Requiring: Q value is diverse enough
-               State is connected enough (no isolated state)
+    Requiring: Q value is diverse
+               State is connected
+               Route is complex
+    Returns:
+        float: transition quality
+        float: value function quality
     """
+    if(task is None or 
+       not "transition" in task or 
+       not "reset_states" in task or
+       not "reset_triggers" in task):
+        return -1
+    t_mat = get_final_transition(**task)
+    if(t_mat.shape[0] < 2): # For bandit problem, no need to check
+        return 1
+    return check_transition(t_mat)
 
-    if(task is None):
-        return False
-    if(check_transition_quality(task["transition"]) and 
-            check_reward_quality(task["transition"], task["reward"])):
-        return True
-    return False
 
-
+def check_task_rewards(task):
+    """
+    Check the quality of the task
+    Requiring: Q value is diverse
+               State is connected
+               Route is complex
+    Returns:
+        float: transition quality
+        float: value function quality
+    """
+    if(task is None or 
+       not "transition" in task or 
+       not "reset_states" in task or
+       not "reset_triggers" in task or 
+       not "reward" in task):
+        return -100
+    t_mat = get_final_transition(**task)
+    r_mat = get_final_reward(**task)
+    return check_valuefunction(t_mat, r_mat)
