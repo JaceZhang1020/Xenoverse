@@ -99,10 +99,15 @@ def reward_sampler(task:dict,
 
 def transition_sampler(state_space:int, 
                     action_space:int, 
+                    min_state_space:int, 
                     transition_diversity:int):
         
         # Sample a subset of states
-        sample_state_space = random.randint(state_space // 3, state_space + 1)
+        if(min_state_space is None):
+            min_state_space = state_space
+        else:
+            min_state_space = min(min_state_space, state_space)
+        sample_state_space = random.randint(min_state_space, state_space + 1)
         state_mapping = numpy.random.permutation(state_space)[:sample_state_space]
     
         # Sample the reset states
@@ -126,15 +131,18 @@ def transition_sampler(state_space:int,
 
         # Sample positive reset trigger and reset states
         iter = 0
+        max_iter = 1000
         reset_trigger_positive = numpy.zeros(sample_state_space)
         reset_dist = numpy.zeros(sample_state_space)
-        while(numpy.sum(reset_trigger_positive) < 1 or numpy.sum(reset_dist) < 1):
+        while(numpy.sum(reset_trigger_positive) < 1 
+              or numpy.sum(reset_dist) < 1
+              and iter < max_iter):
 
             proc_s = loc_s[:, 0] / max_axis_length
             max_proc_s = numpy.max(proc_s) - eps
             min_proc_s = numpy.min(proc_s) + eps
-            max_proc_s_start = min(0.60, max_proc_s - eps)
-            min_proc_s_end  = max(0.40, min_proc_s + eps)
+            max_proc_s_start = min(0.60, max_proc_s - 0.10)
+            min_proc_s_end  = max(0.40, min_proc_s + 0.10)
 
             positive_prob = numpy.clip(proc_s - random.uniform(max_proc_s_start, max_proc_s), 0.0, 1.0)
             positive_prob *= max(1, 0.05 * random.random() * sample_state_space) / (numpy.sum(positive_prob) + eps) 
@@ -151,6 +159,10 @@ def transition_sampler(state_space:int,
             if(numpy.sum(reset_prob) < 1):
                 reset_prob += eps
             reset_dist = numpy.random.binomial(1, reset_prob).astype(float) * (1 - reset_trigger) # Avoid resetting to triggers
+            iter += 1
+
+        if(iter > max_iter):
+            raise RuntimeError("Failed to sample a valid task, consider increasing the number of states")
 
         reset_dist = reset_dist / numpy.sum(reset_dist)
 
@@ -204,9 +216,9 @@ def transition_sampler(state_space:int,
                 "state_embedding": loc_s}
 
 def AnyMDPTaskSampler(state_space:int=128,
-                 action_space:int=5, 
+                 action_space:int=5,
+                 min_state_space:int=None,
                  epoch_state_visit:int=4,
-                 transition_diversity:int=6,
                  max_iteration:int=50,
                  quality_threshold_transition:float=0.55,
                  quality_threshold_valuefunction:float=0.20,
@@ -236,8 +248,9 @@ def AnyMDPTaskSampler(state_space:int=128,
 
     while (qtrans < quality_threshold_transition or trans_step < 10) and trans_step < max_iteration:
         task.update(transition_sampler(state_space, 
-                                       action_space, 
-                                       transition_diversity))
+                                       action_space,
+                                       min_state_space,
+                                       action_space + 1))
         qtrans = check_task_trans(task)
         if(qtrans > qtrans_max):
             qtrans_max = qtrans
@@ -255,7 +268,7 @@ def AnyMDPTaskSampler(state_space:int=128,
             qvf_max = qvf
             best_task = deepcopy(task)
         vf_step += 1
-        
+
     del task["state_embedding"]
     del task["reset_triggers_positive"]
     del task["reset_triggers_negative"]

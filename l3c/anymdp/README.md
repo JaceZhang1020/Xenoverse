@@ -64,13 +64,13 @@ while not done:
 In case you do not want the ground truth rewards and transition to be leaked to the agent, use the AnyMDPSolverQ instead. This solver inplement a ideal environment modeling and a planning-based policy.
 
 ```python
-from l3c.anymdp import AnyMDPSolverQ, AnyMDPSolverMBRL
+from l3c.anymdp import AnyMDPSolverQ, AnyMDPSolverOTS
 
- # AnyMDPSolverQ solves the MDP with Table Q-Learning, without seeing the ground truth rewards and transition
-solver = AnyMDPSolverQ(env) 
+ # AnyMDPSolverOTS solves the MDP with Value Iteration and Optimal Thompson Sampling (Gaussian Noise)
+solver = AnyMDPSolverOTS(env) 
 
-# AnyMDPSolverMBRL solves the MDP with Ideal Environment Modeling and Planning, without seeing the ground truth rewards and transition
-#solver = AnyMDPSolverMBRL(env) 
+# AnyMDPSolverQ solves the MDP with Q-learning and Optimal Thompson Sampling (Gaussian Noise)
+#solver = AnyMDPSolverQ(env) 
 
 state, info = env.reset()
 done = False

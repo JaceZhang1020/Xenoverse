@@ -3,7 +3,9 @@ if __name__=="__main__":
     from l3c.anymdp import AnyMDPEnv, AnyMDPSolverOpt, AnyMDPSolverOTS, AnyMDPSolverQ, AnyMDPTaskSampler
 
     env = gym.make("anymdp-v0")
-    task = AnyMDPTaskSampler(32, 5)
+    task = AnyMDPTaskSampler(state_space=64, 
+                             action_space=5,
+                             min_state_space=16)
     prt_freq = 1000
     env.set_task(task)
     max_steps = 32000

@@ -84,8 +84,11 @@ class AnyMDPEnv(gym.Env):
                 reward = random.binomial(1, reward_gt)
             else:
                 reward = - random.binomial(1, abs(reward_gt))
+        transition_ext_gt = numpy.zeros((self.n_states,))
+        for i,s in enumerate(self.state_mapping):
+            transition_ext_gt[s] = transition_gt[i]
 
-        info = {"steps": self.steps, "transition_gt": transition_gt, "reward_gt": reward_gt}
+        info = {"steps": self.steps, "transition_gt": transition_ext_gt, "reward_gt": reward_gt}
         self.steps += 1
         self._state = next_state
         #print("inner", next_state, "outer", self.state_mapping[next_state], self.max_steps,
