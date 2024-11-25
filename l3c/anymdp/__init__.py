@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from gym.envs.registration import register
-from l3c.anymdp.anymdp_env import AnyMDPEnv
+from l3c.anymdp.anymdp_env import AnyMDPEnv, AnyMDPEnvD2C
 from l3c.anymdp.anymdp_solver_opt import AnyMDPSolverOpt
 from l3c.anymdp.anymdp_solver_ots import AnyMDPSolverOTS
 from l3c.anymdp.anymdp_solver_q import AnyMDPSolverQ
@@ -23,4 +23,11 @@ register(
     id='anymdp-v0',
     entry_point='l3c.anymdp:AnyMDPEnv',
     kwargs={"max_steps": 5000},
+)
+
+register(
+    id='anymdp-d2c-v0',
+    entry_point='l3c.anymdp:AnyMDPEnvD2C',
+    kwargs={"max_steps": 5000,
+            "state_dim": 16},
 )

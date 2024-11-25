@@ -81,11 +81,15 @@ class AnyMDPEnv(gym.Env):
                 reward = float(random.binomial(1, reward_gt))
             else:
                 reward = - float(random.binomial(1, abs(reward_gt)))
-        transition_ext_gt = numpy.zeros((self.n_states,))
-        for i,s in enumerate(self.state_mapping):
-            transition_ext_gt[s] = transition_gt[i]
 
-        info = {"steps": self.steps, "transition_gt": transition_ext_gt, "reward_gt": reward_gt}
+        info = {"steps": self.steps, "reward_gt": reward_gt}
+
+        if(self.state_mapping.ndim == 1):
+            transition_ext_gt = numpy.zeros((self.n_states,))
+            for i,s in enumerate(self.state_mapping):
+                transition_ext_gt[s] = transition_gt[i]
+            info["transition_gt"] = transition_ext_gt
+
         self.steps += 1
         self._state = next_state
         #print("inner", next_state, "outer", self.state_mapping[next_state], self.max_steps,
@@ -102,3 +106,18 @@ class AnyMDPEnv(gym.Env):
     @property
     def inner_state(self):
         return self._state
+
+class AnyMDPEnvD2C(AnyMDPEnv):
+    """
+    Transfer a AnyMDPEnv to Continuous State Space without resampling a task
+    """
+    def __init__(self, max_steps, state_dim):
+        super().__init__(max_steps)
+        self.observation_space = spaces.Box(0., 1., shape=(state_dim,))
+        self.state_dim = state_dim
+
+    def set_task(self, task_config):
+        super().set_task(task_config)
+        n_inner_states = self.state_mapping.shape[0]
+        self.state_mapping = numpy.random.normal(size=(n_inner_states, self.state_dim))
+        self.observation_space = spaces.Box(0., 1., shape=(self.state_dim,))

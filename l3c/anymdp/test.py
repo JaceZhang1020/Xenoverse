@@ -1,15 +1,41 @@
 if __name__=="__main__":
     import gym
-    from l3c.anymdp import AnyMDPEnv, AnyMDPSolverOpt, AnyMDPSolverOTS, AnyMDPSolverQ, AnyMDPTaskSampler
+    import l3c.anymdp
+    from l3c.anymdp import  AnyMDPSolverOpt, AnyMDPSolverOTS, AnyMDPSolverQ, AnyMDPTaskSampler
 
-    env = gym.make("anymdp-v0")
     task = AnyMDPTaskSampler(state_space=64, 
                              action_space=5,
-                             min_state_space=1)
-    prt_freq = 1000
-    env.set_task(task)
+                             min_state_space=32)
     max_steps = 32000
+    prt_freq = 1000
+
+    # Test D2C Random Policy
+    env = gym.make("anymdp-d2c-v0")
+    env.set_task(task)
+
     # Test Random Policy
+    state, info = env.reset()
+    acc_reward = 0
+    epoch_reward = 0
+    done = False
+
+    steps = 0
+    while steps < max_steps:
+        action = env.action_space.sample()
+        state, reward, done, info = env.step(action)
+        acc_reward += reward
+        epoch_reward += reward
+        steps += 1
+        if(steps % prt_freq == 0 and steps > 0):
+            print("Step:{}\tEpoch Reward: {}".format(steps, epoch_reward))
+            epoch_reward = 0
+        if(done):
+            state, info = env.reset()
+    print("D2C Random Policy Summary: {}".format(acc_reward))
+
+    # Test Random Policy
+    env = gym.make("anymdp-v0")
+    env.set_task(task)
     state, info = env.reset()
     acc_reward = 0
     epoch_reward = 0
