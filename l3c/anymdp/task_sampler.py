@@ -13,10 +13,12 @@ from l3c.anymdp.solver import check_task_trans, check_task_rewards
 
 def reward_sampler_sa(state_space:int, 
                    action_space:int, 
-                   reward_sparsity:float=0.05,
-                   positive_ratio:float=0.10,
+                   reward_sparsity:float=0.25,
+                   positive_ratio:float=0.25,
                    reward_noise_max:float=0.30):
     reward_mask = numpy.zeros((state_space, action_space))
+    reward_sparsity = min(reward_sparsity * random.exponential(1.0), 1.0)
+    positive_ratio = min(positive_ratio * random.exponential(1.0), 1.0)
     while numpy.sum(reward_mask) < 1:
         reward_sparsity = min(reward_sparsity, 1.0)
         reward_sparsity = random.random() * reward_sparsity
