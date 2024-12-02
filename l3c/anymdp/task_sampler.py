@@ -208,7 +208,9 @@ def transition_sampler(state_space:int,
 
         # Now caculate the state-action-state distance after taking action [ns, na, ns]
         dist_s_a_s = numpy.linalg.norm(target_s_a[:, :, None, :] - loc_s[None, None, :, :], axis=3)
-        prob_s_a_s = numpy.exp(- (dist_s_a_s / avg_dist) ** 2)
+        sigma = avg_dist * random.exponential(scale=1.0)
+
+        prob_s_a_s = numpy.exp(- (dist_s_a_s / sigma) ** 2)
 
         # Now sample the transition by masking the state-action-state distance
         dist_s_a_s_index = numpy.argsort(dist_s_a_s, axis=2)[:, :, :adj_ub]
@@ -255,8 +257,8 @@ def AnyMDPTaskSampler(state_space:int=128,
 
     # Generate Transition Matrix While Check its Quality
     task = {"state_space": state_space,
-                "action_space": action_space,
-                "max_steps": max_steps}
+            "action_space": action_space,
+            "max_steps": max_steps}
 
     qtrans = -1
     qvf = -1
