@@ -41,13 +41,14 @@ def comb_sampler(n):
 
 def reward_sampler(task:dict,
                    state_space:int, 
-                   action_space:int):
+                   action_space:int,
+                   reward_noise_choice:list):
 
     if("reset_triggers_positive" not in task):
         return {}
 
     reward_scale = random.uniform(0.01, 0.10) # Scale the reward noise
-    reward_noise_type = random.choice(['binomial', 'normal'])
+    reward_noise_type =  random.choice(reward_noise_choice)
 
     if(state_space < 2):
         reward_matrix = numpy.random.random((1, action_space, 1)) * reward_scale
@@ -147,10 +148,11 @@ def transition_sampler(state_space:int,
         # Sample positive reset trigger and reset states
         iter = 0
         max_iter = 10000
+        need_reset_trigger = (random.random() > 0.5) # 50% probability of not requiring reset triggers
         reset_trigger_positive = numpy.zeros(sample_state_space)
         reset_dist = numpy.zeros(sample_state_space)
-        while(numpy.sum(reset_trigger_positive) < 1 
-              or numpy.sum(reset_dist) < 1
+        while(((numpy.sum(reset_trigger_positive) < 1 and not need_reset_trigger)
+              or numpy.sum(reset_dist) < 1)
               and iter < max_iter):
 
             proc_s = loc_s[:, 0] / max_axis_length
@@ -159,10 +161,11 @@ def transition_sampler(state_space:int,
             max_proc_s_start = min(0.60, max_proc_s - 0.20)
             min_proc_s_end  = max(0.40, min_proc_s + 0.20)
 
-            positive_prob = numpy.clip(proc_s - random.uniform(max_proc_s_start, max_proc_s), 0.0, 1.0)
-            positive_prob *= max(1, 0.05 * random.random() * sample_state_space) / (numpy.sum(positive_prob) + eps) 
-            positive_prob = numpy.clip(positive_prob, 0.0, 1.0)
-            reset_trigger_positive = numpy.random.binomial(1, positive_prob)
+            if(not need_reset_trigger):
+                positive_prob = numpy.clip(proc_s - random.uniform(max_proc_s_start, max_proc_s), 0.0, 1.0)
+                positive_prob *= max(1, 0.05 * random.random() * sample_state_space) / (numpy.sum(positive_prob) + eps) 
+                positive_prob = numpy.clip(positive_prob, 0.0, 1.0)
+                reset_trigger_positive = numpy.random.binomial(1, positive_prob)
 
             # Sample the reset state distribution
             reset_prob = numpy.clip(random.uniform(min_proc_s, min_proc_s_end) - proc_s, 0.0, 1.0)
@@ -243,9 +246,11 @@ def AnyMDPTaskSampler(state_space:int=128,
                  action_space:int=5,
                  min_state_space:int=None,
                  epoch_state_visit:int=4,
+                 max_transition_diversity:int=8,
                  max_iteration:int=50,
                  quality_threshold_transition:float=0.55,
                  quality_threshold_valuefunction:float=0.20,
+                 reward_noise_choice:list=['normal'],
                  seed=None):
     # Sampling Transition Matrix and Reward Matrix based on Irwin-Hall Distribution and Gaussian Distribution
     if(seed is not None):
@@ -274,7 +279,7 @@ def AnyMDPTaskSampler(state_space:int=128,
         task.update(transition_sampler(state_space, 
                                        action_space,
                                        min_state_space,
-                                       action_space + 1))
+                                       max_transition_diversity))
         qtrans = check_task_trans(task)
         if(qtrans > qtrans_max):
             qtrans_max = qtrans
@@ -286,7 +291,8 @@ def AnyMDPTaskSampler(state_space:int=128,
         substate_space = task["state_mapping"].shape[0]
         task.update(reward_sampler(task,
                                    substate_space, 
-                                   action_space))
+                                   action_space,
+                                   reward_noise_choice))
         qvf = check_task_rewards(task)
         if(qvf > qvf_max):
             qvf_max = qvf
