@@ -11,23 +11,21 @@ from l3c.utils import pseudo_random_seed
 from l3c.anymdp.solver import check_task_trans, check_task_rewards
 
 
-def reward_sampler_sa(state_space:int, 
+def reward_sampler_sas(state_space:int, 
                    action_space:int, 
                    reward_sparsity:float=0.25,
-                   positive_ratio:float=0.25,
+                   exp_positive_ratio:float=0.10,
                    reward_noise_max:float=0.30):
-    reward_mask = numpy.zeros((state_space, action_space))
+    reward_mask = numpy.zeros((state_space,))
     reward_sparsity = min(reward_sparsity * random.exponential(1.0), 1.0)
     positive_ratio = min(positive_ratio * random.exponential(1.0), 1.0)
-    while numpy.sum(reward_mask) < 1:
-        reward_sparsity = min(reward_sparsity, 1.0)
-        reward_sparsity = random.random() * reward_sparsity
-        reward_sparsity = max(1 / (state_space*action_space), reward_sparsity) # prevent all-zeros
-        reward_mask = random.binomial(1, reward_sparsity, size=(state_space, action_space))
-    reward_noise = reward_mask * reward_noise_max * random.rand(state_space, action_space) * random.random()
+    reward_mask = random.binomial(1, reward_sparsity, size=(state_space,))
+    reward_noise_mask = random.binomial(1, reward_sparsity, size=(state_space,))
+    reward_noise = reward_noise_mask * reward_noise_max  * random.random() * random.rand(state_space)
 
-    sign_mask = 2.0 * random.binomial(1, positive_ratio, size=(state_space, action_space)) - 1
-    reward_matrix = numpy.abs(random.normal(loc=0, scale=1.0, size=(state_space, action_space))) * reward_mask * sign_mask
+    positive_ratio = min(exp_positive_ratio * random.exponential(1.0), 1.0)
+    sign_mask = 2.0 * random.binomial(1, positive_ratio, size=(state_space,)) - 1
+    reward_matrix = numpy.abs(random.normal(loc=0, scale=1.0, size=(state_space,))) * reward_mask * sign_mask
     return reward_matrix, reward_noise
 
 def comb_sampler(n):
@@ -37,7 +35,6 @@ def comb_sampler(n):
     else:
         comb_type = comb_type[-n:]
     return comb_type
-
 
 def reward_sampler(task:dict,
                    state_space:int, 
@@ -58,8 +55,7 @@ def reward_sampler(task:dict,
                 "reward_noise_type": reward_noise_type}
 
     # Sample Pitfalls
-    n = int(2 * numpy.sqrt(state_space))
-    v_scale = random.uniform(n, 100) * reward_scale
+    v_scale = random.uniform(10, 100) * reward_scale
     rewards_neg = - numpy.random.random(size=[state_space]) * v_scale \
         * task["reset_triggers_negative"]
     # Sample Sucesses
@@ -82,13 +78,14 @@ def reward_sampler(task:dict,
     crucial_index = numpy.where(reward_is_crucial)
 
     reward_type=comb_sampler(3)
-    if(reward_type[0] == '1'): # Add random s-a reward
-        rm, rn = reward_sampler_sa(state_space, action_space)
+    if(reward_type[0] == '1'): # Add random -s reward
+        rm, rn = reward_sampler_sas(state_space, action_space)
         rm[crucial_index] = 0.0 # Make sure the reset triggers are not rewarded
-        reward_matrix += 0.2 * reward_scale* rm[:, :, None]
-        reward_noise += 0.2 * reward_scale * rn[:, :, None]
+        rn[crucial_index] = 0.0 # Make sure the reset triggers are not rewarded
+        reward_matrix += random.exponential(0.10) * reward_scale * rm[None, None, :]
+        reward_noise  += random.exponential(0.10) * reward_scale * rn[None, None, :]
     if(reward_type[1] == '1'): # Add random a reward
-        reward_matrix -= 0.2 * reward_scale * numpy.random.random((1, action_space, 1))
+        reward_matrix += random.exponential(0.01) * reward_scale * (numpy.random.random((1, action_space, 1)) - 0.5)
     if(reward_type[2] == '1'): # Add a random s-s reward
         ndim = task["state_embedding"].shape[1]
         r_direction = numpy.random.random((1, ndim)) # Sample a random reward direction
@@ -136,19 +133,19 @@ def transition_sampler(state_space:int,
         eps = 1e-6
 
         # Now sample dimension of the tasks
-        ndim = random.randint(2, 5)
+        ndim = random.randint(2, 8)
 
         # Sample the location of states
         loc_s = numpy.random.random((sample_state_space, ndim))
 
         # Sample the main axis length
-        max_axis_length = random.randint(4, 16)
+        max_axis_length = random.randint(2, sample_state_space)
         loc_s[:, 0] *= max_axis_length
 
         # Sample positive reset trigger and reset states
         iter = 0
         max_iter = 10000
-        need_reset_trigger = (random.random() > 0.5) # 50% probability of not requiring reset triggers
+        need_reset_trigger = (random.random() > 0.70) # 30% probability of not requiring reset triggers
         reset_trigger_positive = numpy.zeros(sample_state_space)
         reset_dist = numpy.zeros(sample_state_space)
         while(((numpy.sum(reset_trigger_positive) < 1 and not need_reset_trigger)

@@ -10,7 +10,7 @@ class AnyMDPSolverOpt(object):
     Solver for AnyMDPEnv with Bellman Equation and Value Iteration
     Suppose to know the ground truth of the environment
     """
-    def __init__(self, env, gamma=0.98):
+    def __init__(self, env, gamma=0.99):
         if(not env.task_set):
             raise Exception("AnyMDPEnv is not initialized by 'set_task', must call set_task first")
         self.n_actions = env.action_space.n

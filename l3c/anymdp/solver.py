@@ -108,7 +108,7 @@ def check_valuefunction(t_mat, r_mat):
         corr_ls = 1
 
     quality = qstd + qdelta +  numpy.log(1 + 1.0e-8 - corr_lr) + numpy.log(1 + 1.0e-8 - corr_ls)
-
+    print("std", qstd, "delta", qdelta, "corr_lr", corr_lr, "corr_ls", corr_ls)
     return quality
 
 
