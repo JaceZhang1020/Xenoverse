@@ -94,10 +94,12 @@ def check_valuefunction(t_mat, r_mat):
 
     vbase = numpy.sqrt(numpy.mean(vm_r ** 2))
 
+    wht = 1.5
+
     corr_ls, _ = stats.spearmanr(vm_l, vm_s)
     corr_lr, _ = stats.spearmanr(vm_l, vm_r)
-    qdelta = numpy.mean((vm_l - vm_r)) / vbase
-    qstd = numpy.std(vm_l) / vbase
+    qdelta = wht * numpy.tanh(numpy.mean((vm_l - vm_r)) / vbase / wht)
+    qstd = wht * numpy.tanh(numpy.std(vm_l) / vbase / wht)
 
     if(qstd < 0.1): # value function too flat
         return -100
@@ -107,7 +109,11 @@ def check_valuefunction(t_mat, r_mat):
     if(numpy.isnan(corr_ls)):
         corr_ls = 1
 
-    quality = qstd + qdelta +  numpy.log(1 + 1.0e-8 - corr_lr) + numpy.log(1 + 1.0e-8 - corr_ls)
+    q_random = numpy.log((1 + 1.0e-10 - corr_lr))
+    q_longshort = numpy.log((1 + 1.0e-10 - corr_ls))
+
+    quality = q_random + q_longshort + qdelta + qstd
+
     return quality
 
 

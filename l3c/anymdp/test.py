@@ -5,7 +5,8 @@ if __name__=="__main__":
 
     task = AnyMDPTaskSampler(state_space=64, 
                              action_space=5,
-                             min_state_space=32)
+                             min_state_space=32,
+                             verbose=True)
     max_steps = 32000
     prt_freq = 1000
 
