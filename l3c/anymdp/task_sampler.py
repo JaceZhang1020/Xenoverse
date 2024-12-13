@@ -249,6 +249,7 @@ def AnyMDPTaskSampler(state_space:int=128,
                  quality_threshold_valuefunction:float=0.0,
                  reward_noise_choice:list=['normal'],
                  seed=None,
+                 keep_metainfo=False,
                  verbose=False):
     # Sampling Transition Matrix and Reward Matrix based on Irwin-Hall Distribution and Gaussian Distribution
     if(seed is not None):
@@ -301,8 +302,9 @@ def AnyMDPTaskSampler(state_space:int=128,
         print(f"Resample transitions {trans_step} times, quality: {qtrans_max:.2f}",
               f"Rsample rewards {vf_step} times, quality: {qvf_max:.2f}")
 
-    del task["state_embedding"]
-    del task["reset_triggers_positive"]
-    del task["reset_triggers_negative"]
+    if(not keep_metainfo):
+        del task["state_embedding"]
+        del task["reset_triggers_positive"]
+        del task["reset_triggers_negative"]
 
     return best_task

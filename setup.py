@@ -35,7 +35,7 @@ setup(
         './mazeworld/envs/img/*',
         ]
     },
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     tests_require=['pytest', 'mock'],
     include_package_data=True,
     install_requires=[

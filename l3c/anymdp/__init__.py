@@ -18,6 +18,7 @@ from l3c.anymdp.anymdp_solver_opt import AnyMDPSolverOpt
 from l3c.anymdp.anymdp_solver_ots import AnyMDPSolverOTS
 from l3c.anymdp.anymdp_solver_q import AnyMDPSolverQ
 from l3c.anymdp.task_sampler import AnyMDPTaskSampler
+from l3c.anymdp.visualizer import task_visualizer
 
 register(
     id='anymdp-v0',
