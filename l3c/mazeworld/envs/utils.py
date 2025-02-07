@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 
-#@njit(cache=True)
+@njit(cache=True)
 def conv2d_numpy(input_data:np.ndarray, 
                  kernel:np.ndarray, 
                  stride=(1,1), padding=0):

@@ -12,4 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__version__ = '0.2.1.23'
+from gym.envs.registration import register
+from l3c.anymdpv2.anymdp_env import AnyMDPEnv
+from l3c.anymdpv2.task_sampler import AnyMDPv2TaskSampler
+
+register(
+    id='anymdp-v2',
+    entry_point='l3c.anymdpv2:AnyMDPEnv',
+    kwargs={"max_steps": 5000},
+)
