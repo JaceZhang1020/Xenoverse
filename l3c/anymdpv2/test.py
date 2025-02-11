@@ -4,16 +4,19 @@ if __name__=="__main__":
 
     task = AnyMDPv2TaskSampler(state_dim=128, 
                              action_dim=16)
-    max_steps = 32000
-    prt_freq = 1000
+    max_steps = 5000
+    prt_freq = 100
 
     # Test Random Policy
-    env = gym.make("anymdp-v2")
+    env = gym.make("anymdp-v2-visualizer")
     env.set_task(task)
     state, info = env.reset()
     acc_reward = 0
     epoch_reward = 0
     done = False
+    obs_arr = []
+    act_arr = []
+    state_arr = []
 
     steps = 0
     while steps < max_steps:
@@ -28,5 +31,6 @@ if __name__=="__main__":
         if(done):
             state, info = env.reset()
     print("Random Policy Summary: {}".format(acc_reward))
+    env.visualize_and_save()
 
     print("Test Passed")

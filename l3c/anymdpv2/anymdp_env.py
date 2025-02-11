@@ -52,10 +52,10 @@ class AnyMDPEnv(gym.Env):
 
         ### update inner state
         inner_action = self.action_map(numpy.array(action))
-        next_inner_state = self._inner_state + inner_action * self.action_weight
+        next_inner_state = self._inner_state + inner_action * self.action_weight + self.transition_noise * random.normal(size=(self.ndim,))
 
         ### basic reward
-        reward = self.average_cost
+        reward = self.average_cost + self.reward_noise * random.normal()
         done = False
 
         if(self.mode == 'sgoal'):
@@ -65,12 +65,18 @@ class AnyMDPEnv(gym.Env):
                     done = True
                     reward += gr
                     break
+            if(len(self.sgoal_loc) > 0):
+                idx = self.steps % len(self.sgoal_loc)
+                goal_loc = self.sgoal_loc[idx][0]
+            else:
+                goal_loc = numpy.zeros_like(self._inner_state)
         else:
             # Dynamic Goal
             dgoal_loc = self.calculate_loc(self.dgoal_loc, self.steps)
             dgoal_dist = numpy.linalg.norm(next_inner_state - dgoal_loc)
             if(dgoal_dist < self.dgoal_potential[0]):
                 reward += self.dgoal_potential[1] * (1 - dgoal_dist / self.dgoal_potential[0])
+            goal_loc = dgoal_loc
 
         for gs, d, gr in self.pitfalls_loc:
             if(numpy.linalg.norm(next_inner_state - gs) < d):
@@ -85,8 +91,9 @@ class AnyMDPEnv(gym.Env):
             next_s = numpy.linalg.norm(next_inner_state - pt)
             reward += gr * (next_s - pre_s)
 
+
         self.steps += 1
-        info = {"steps": self.steps}
+        info = {"steps": self.steps, "goal_loc": goal_loc}
 
         self._inner_state = next_inner_state
         self._state = self.observation_map(self._inner_state)
@@ -98,9 +105,10 @@ class AnyMDPEnv(gym.Env):
     
     def calculate_loc(self, loc, steps):
         # Sample a cos nx + b cos ny
+        g_loc = numpy.zeros(self.ndim)
         for n, k in loc:
-            loc += k[0] * numpy.cos(n * self.steps) + k[1] * numpy.sin(n * self.steps)
-        return loc / len(loc)
+            g_loc += k[:, 0] * numpy.cos(0.01 * n * self.steps) + k[:, 1] * numpy.sin(0.01 * n * self.steps)
+        return g_loc / len(loc)
     
     @property
     def state(self):
@@ -108,4 +116,5 @@ class AnyMDPEnv(gym.Env):
     
     @property
     def inner_state(self):
+        # 复制内部状态
         return numpy.copy(self._inner_state)

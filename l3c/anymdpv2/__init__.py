@@ -15,9 +15,16 @@
 from gym.envs.registration import register
 from l3c.anymdpv2.anymdp_env import AnyMDPEnv
 from l3c.anymdpv2.task_sampler import AnyMDPv2TaskSampler
+from l3c.anymdpv2.visualizer import AnyMDPv2Visualizer
 
 register(
     id='anymdp-v2',
     entry_point='l3c.anymdpv2:AnyMDPEnv',
+    kwargs={"max_steps": 5000},
+)
+
+register(
+    id='anymdp-v2-visualizer',
+    entry_point='l3c.anymdpv2:AnyMDPv2Visualizer',
     kwargs={"max_steps": 5000},
 )
