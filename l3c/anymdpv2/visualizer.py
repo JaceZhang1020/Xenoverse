@@ -4,6 +4,7 @@ from sklearn.manifold import TSNE
 from sklearn.datasets import load_digits
 from .anymdp_env import AnyMDPEnv
 from l3c.utils import pseudo_random_seed
+from restools.plotting.plot_2D import savitzky_golay
 
 class AnyMDPv2Visualizer(AnyMDPEnv):
     
@@ -68,20 +69,35 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
         c2 = self.color_spec(1)
 
         plt.figure(figsize=(10, 8))
+        # Show Observation T-SNE
         plt.subplot(2, 2, 1)
         scatter = plt.scatter(obs_tsne[:, 0], obs_tsne[:, 1], c=c1, s=10, alpha=0.2)
         plt.title("Observation", fontsize=12, fontweight='bold', color='blue', pad=10)
+
+        # Show Action T-SNE
         plt.subplot(2, 2, 2)
         scatter = plt.scatter(act_tsne[:, 0], act_tsne[:, 1], c=c1, s=10, alpha=0.2)
         plt.title("Action", fontsize=12, fontweight='bold', color='blue', pad=10)
+
+        # Show State T-SNE
         plt.subplot(2, 2, 3)
         scatter = plt.scatter(s_tsne[:max_steps, 0], s_tsne[:max_steps, 1], c=c1, label='Agent', s=10, alpha=0.2, marker='o')
-        label = f'Static Goal {len(self.sgoal_loc)}' if(self.mode == 'sgoal') else 'Dynamic Goal'
+
+        if(self.mode == 'dgoal'):
+            label = 'Dynamic Goal'
+        elif(self.mode == 'sgoal'):
+            label = f'Static Goal {len(self.sgoal_loc)}'
+        elif(self.mode == 'disp'):
+            label = f'Static Goal with Displacement {len(self.sgoal_loc)}'
         scatter = plt.scatter(s_tsne[max_steps:2*max_steps, 0], s_tsne[max_steps:2*max_steps, 1], c=c2, label=label, s=10, alpha=1.0, marker='+')
         scatter = plt.scatter(s_tsne[2*max_steps:, 0], s_tsne[2*max_steps:, 1], c='brown', label='pitfalls', s=10, alpha=1.0, marker='D')
         plt.legend()
         plt.title("Inner States", fontsize=12, fontweight='bold', color='blue', pad=10)
+
+        # Show Reward Curve
         plt.subplot(2, 2, 4)
-        scatter = plt.plot(numpy.arange(numpy.size(self.reward_records)), self.reward_records, c='red')
+        rewards_smooth = savitzky_golay(self.reward_records, window_size=99, order=3)
+        scatter = plt.plot(numpy.arange(numpy.size(self.reward_records)), self.reward_records, c='red', alpha=0.2)
+        scatter = plt.plot(numpy.arange(numpy.size(rewards_smooth)), rewards_smooth, c='red')
         plt.title("Reward", fontsize=12, fontweight='bold', color='blue', pad=10)
         plt.savefig(file_name)

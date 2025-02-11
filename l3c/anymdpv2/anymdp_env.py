@@ -10,6 +10,7 @@ from numpy import random
 from gym import error, spaces, utils
 from gym.utils import seeding
 from l3c.utils import pseudo_random_seed
+from copy import deepcopy
 
 class AnyMDPEnv(gym.Env):
     def __init__(self, max_steps):
@@ -43,6 +44,8 @@ class AnyMDPEnv(gym.Env):
         loc, noise = rnd.choice(self.born_loc)
         self._inner_state = loc + noise * random.normal(size=self.ndim)
         self._state = self.observation_map(self._inner_state)
+        if(self.mode == 'sgoal' or self.mode == 'disp'):
+            self.available_goal = deepcopy(self.sgoal_loc)
         return self._state, {"steps": self.steps}
 
     def step(self, action):
@@ -58,18 +61,28 @@ class AnyMDPEnv(gym.Env):
         reward = self.average_cost + self.reward_noise * random.normal()
         done = False
 
-        if(self.mode == 'sgoal'):
+        if(self.mode == 'sgoal' or self.mode == 'disp'):
             # Static Goal (with reset)
-            for gs, d, gr in self.sgoal_loc:
-                if(numpy.linalg.norm(next_inner_state - gs) < d):
-                    done = True
+            min_dist = numpy.inf
+            nearest_goal = None
+            for gs, d, gr in self.available_goal:
+                dist = numpy.linalg.norm(next_inner_state - gs)
+                if(dist < min_dist):
+                    min_dist = d
+                    nearest_goal = numpy.copy(gs)
+                if(dist < d):
                     reward += gr
-                    break
-            if(len(self.sgoal_loc) > 0):
-                idx = self.steps % len(self.sgoal_loc)
-                goal_loc = self.sgoal_loc[idx][0]
-            else:
+                    if(self.mode == 'disp'):
+                        done = True
+                        break
+                    else:                                            
+                        self.available_goal.remove((gs, d, gr))
+                        break
+            if(nearest_goal is None):
+                done = True
                 goal_loc = numpy.zeros_like(self._inner_state)
+            else:
+                goal_loc = nearest_goal
         else:
             # Dynamic Goal
             dgoal_loc = self.calculate_loc(self.dgoal_loc, self.steps)

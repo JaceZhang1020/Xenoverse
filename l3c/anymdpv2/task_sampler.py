@@ -100,8 +100,8 @@ def sample_dgoal(task, max_order=16, max_item=3):
         order = random.randint(1, max_order + 1)
         factor = random.normal(size=(task['ndim'], 2))
         dgoal_loc.append((order, factor))
-    r_range = random.uniform(0.05, 0.40)
-    dr = random.exponential(1.0)
+    r_range = random.uniform(0.10, 0.50)
+    dr = random.exponential(2.0)
     return {"dgoal_loc": dgoal_loc, "dgoal_potential": (r_range, dr)}
 
 def AnyMDPv2TaskSampler(state_dim:int=256,
@@ -125,7 +125,10 @@ def AnyMDPv2TaskSampler(state_dim:int=256,
         random.seed(pseudo_random_seed())
     
     task = dict()
-    mode = random.choice(["sgoal", "dgoal"])
+    mode = random.choice(["sgoal", "dgoal", "disp"])
+    # sgoal: static goal, one-step reward with reset
+    # dgoal: moving goal, continuous reward
+    # disp: displacement, one-step reward without reset
 
     task["mode"] = mode
     task["state_dim"] = state_dim
@@ -141,7 +144,7 @@ def AnyMDPv2TaskSampler(state_dim:int=256,
     task.update(sample_action_mapping(task)) # Action Mapping
     task.update(sample_born_loc(task)) # Born Location
 
-    if(task['mode'] == 'sgoal') :
+    if(task['mode'] == 'sgoal' or task['mode'] == 'disp') :
         task.update(sample_sgoal(task)) # Static Goal Location
     else:
         task.update(sample_dgoal(task)) # Moving Goal Location
