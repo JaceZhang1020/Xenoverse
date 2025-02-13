@@ -15,11 +15,6 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
         self.inner_state_records = []
         self.action_records = []
         self.reward_records = []
-        self.goal_records = []
-        self.colors = []
-
-        self.color_spec_type = [['green', 'black', 'red'],
-                              ['green', 'blue', 'red']]
     
     def color_spec(self, i):
         return [self.color_spec_type[i][idx] for idx in self.colors]
@@ -30,8 +25,6 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
         self.action_records.append(numpy.zeros((self.action_dim,)))
         self.inner_state_records.append(numpy.copy(self.inner_state))
         self.reward_records.append(0.0)
-        self.goal_records.append(numpy.zeros((self.ndim, )))
-        self.colors.append(0)
 
         return obs, info
     
@@ -39,13 +32,8 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
         obs, reward, done, info = super().step(action)
         self.observation_records.append(numpy.copy(obs))
         self.inner_state_records.append(numpy.copy(self.inner_state))
-        self.goal_records.append(numpy.copy(info["goal_loc"]))
         self.action_records.append(numpy.copy(action))
         self.reward_records.append(reward)
-        if(done):
-            self.colors.append(2)
-        else:
-            self.colors.append(1)
         return obs, reward, done, info
 
     def visualize_and_save(self, filename=None):
@@ -57,42 +45,30 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
             file_name = "./anymdp_visualizer_output.pdf"
         obs_arr = numpy.array(self.observation_records, dtype="float32")
         act_arr = numpy.array(self.action_records, dtype="float32")
-        pitfalls = [x[0] for x in self.pitfalls_loc]
-        s_arr = numpy.array(self.inner_state_records + self.goal_records + pitfalls, dtype="float32")
+
+        s_arr = numpy.array(self.inner_state_records)
         max_steps = len(self.inner_state_records)
 
         obs_tsne = tsne.fit_transform(numpy.array(obs_arr))
         act_tsne = tsne.fit_transform(numpy.array(act_arr))
         s_tsne = tsne.fit_transform(numpy.array(s_arr))
         
-        c1 = self.color_spec(0)
-        c2 = self.color_spec(1)
-
         plt.figure(figsize=(10, 8))
         # Show Observation T-SNE
         plt.subplot(2, 2, 1)
-        scatter = plt.scatter(obs_tsne[:, 0], obs_tsne[:, 1], c=c1, s=10, alpha=0.2)
+        scatter = plt.scatter(obs_tsne[:, 0], obs_tsne[:, 1], c='black', s=10, alpha=0.2)
         plt.title("Observation", fontsize=12, fontweight='bold', color='blue', pad=10)
 
         # Show Action T-SNE
         plt.subplot(2, 2, 2)
-        scatter = plt.scatter(act_tsne[:, 0], act_tsne[:, 1], c=c1, s=10, alpha=0.2)
+        scatter = plt.scatter(act_tsne[:, 0], act_tsne[:, 1], c='black', s=10, alpha=0.2)
         plt.title("Action", fontsize=12, fontweight='bold', color='blue', pad=10)
 
         # Show State T-SNE
         plt.subplot(2, 2, 3)
-        scatter = plt.scatter(s_tsne[:max_steps, 0], s_tsne[:max_steps, 1], c=c1, label='Agent', s=10, alpha=0.2, marker='o')
-
-        if(self.mode == 'dgoal'):
-            label = 'Dynamic Goal'
-        elif(self.mode == 'sgoal'):
-            label = f'Static Goal {len(self.sgoal_loc)}'
-        elif(self.mode == 'disp'):
-            label = f'Static Goal with Displacement {len(self.sgoal_loc)}'
-        scatter = plt.scatter(s_tsne[max_steps:2*max_steps, 0], s_tsne[max_steps:2*max_steps, 1], c=c2, label=label, s=10, alpha=1.0, marker='+')
-        scatter = plt.scatter(s_tsne[2*max_steps:, 0], s_tsne[2*max_steps:, 1], c='brown', label='pitfalls', s=10, alpha=1.0, marker='D')
-        plt.legend()
-        plt.title("Inner States", fontsize=12, fontweight='bold', color='blue', pad=10)
+        scatter = plt.scatter(s_tsne[:, 0], s_tsne[:, 1], c=self.reward_records, cmap='viridis', s=10, alpha=0.2, marker='o')
+        plt.colorbar()
+        plt.title("States", fontsize=12, fontweight='bold', color='blue', pad=10)
 
         # Show Reward Curve
         plt.subplot(2, 2, 4)
