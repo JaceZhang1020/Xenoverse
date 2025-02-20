@@ -8,9 +8,9 @@ from restools.plotting.plot_2D import savitzky_golay
 
 class AnyMDPv2Visualizer(AnyMDPEnv):
     
-    def set_task(self, task):
+    def set_task(self, task, **kwargs):
         # Set task will automatically reset all records
-        super().set_task(task)
+        super().set_task(task, **kwargs)
         self.observation_records = []
         self.inner_state_records = []
         self.action_records = []
@@ -26,7 +26,7 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
         self.inner_state_records.append(numpy.copy(self.inner_state))
         self.reward_records.append(0.0)
 
-        return obs, info
+        return obs
     
     def step(self, action):
         obs, reward, done, info = super().step(action)

@@ -1,1 +1,1 @@
-from .random_nn import pseudo_random_seed, RandomMLP
+from .random_nn import pseudo_random_seed, RandomMLP, RandomFourier, RandomGoal

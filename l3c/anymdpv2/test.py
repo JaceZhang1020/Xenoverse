@@ -11,7 +11,7 @@ if __name__=="__main__":
     # Test Random Policy
     env = gym.make("anymdp-v2-visualizer")
     env.set_task(task)
-    state, info = env.reset()
+    state = env.reset()
     acc_reward = 0
     epoch_reward = 0
     done = False

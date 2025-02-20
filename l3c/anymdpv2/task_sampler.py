@@ -7,83 +7,103 @@ import pygame
 import time
 from numpy import random
 from copy import deepcopy
-from l3c.utils import pseudo_random_seed, RandomMLP
+from l3c.utils import pseudo_random_seed, RandomMLP, RandomGoal
 from l3c.anymdp.solver import check_task_trans, check_task_rewards
 
 
 def sample_action_mapping(task):
     ndim = task['ndim']
     action_dim = task['action_dim']
-    action_map = RandomMLP(action_dim + ndim, ndim, n_hidden_layers=random.randint(ndim * 2, ndim *4), output_activation='bounded(-1,1)')
+    s_map = RandomMLP(ndim, ndim, activation='tanh', biases=True)
+    a_map = RandomMLP(action_dim, ndim, activation='tanh', biases=False)
+    func = lambda s,a: s_map(s) + a_map(a)
 
-    return {"action_map": action_map}
+    return {"action_map": func}
 
 def sample_observation_mapping(task):
     ndim = task['ndim']
     observation_dim = task['state_dim']
-    observation_map = RandomMLP(ndim, observation_dim, n_hidden_layers=random.randint(1, ndim // 2 + 1), output_activation='bounded(-1,1)')
+    # Add partial observability to the environment by introducing a bottleneck of lower dimensionality
+    observation_map = RandomMLP(ndim, observation_dim,
+        n_hidden_layers=random.randint(max(ndim - 3, 3), ndim + 1), 
+        activation=['none','tanh'],
+        biases=[True, False])
     return {
         "observation_map": observation_map
     }
 
 def sample_born_loc(task):
     born_loc_num = random.randint(1, 10)
-    born_loc = [(random.uniform(-1, 1, size=(task['ndim'],)), 
+    born_loc = [(random.uniform(- 0.9 * task['box_size'], 0.9 * task['box_size'], 
+                size=(task['ndim'],)), 
                 random.exponential(0.10,)) for i in range(born_loc_num)]
     return {"born_loc": born_loc}
 
-def sample_static_goal(task, num=None):
+def sample_goal_statictrigger(task, num=None):
     if(num is None):
-        sgoal_num = random.randint(0, 10)
+        goal_num = random.randint(1, 10)
     else:
-        sgoal_num = num
-    sgoal_loc = []
-    existing_loc = [loc for loc, _ in task['born_loc']]
-    for i in range(sgoal_num):
-        min_dist = 0.0
-        while min_dist < 0.5:
-            sloc = random.uniform(-1, 1, size=(task['ndim'],))
-            # calculate the distance between the goal and the born location
-            min_dist = 10000   
-            for loc in existing_loc:
-                dist = numpy.linalg.norm(sloc-loc[0])
-                if(dist < min_dist):
-                    min_dist = dist
-        sink_range = random.uniform(0.02, 0.2)
-        reward = random.exponential(10.0)
-        sgoal_loc.append((numpy.copy(sloc), sink_range, reward))
-        existing_loc.append(numpy.copy(sloc))
-    return {"goal_loc": sgoal_loc}
+        goal_num = num
 
-def sample_pitfalls(task):
+    repetitive_loc = [loc for loc, _ in task['born_loc']]
+    for goal in task["goals"]:
+        if(goal.reward_type.find('t') != -1):
+            repetitive_loc.append(goal.position(0))
+    for i in range(goal_num):
+        goal = RandomGoal(task['ndim'],
+                                repetitive_position=repetitive_loc,
+                                type='static',
+                                reward_type='t',
+                                box_size=task['box_size'])
+        repetitive_loc.append(goal.position(0))
+        task["goals"].append(goal)
+
+def sample_goal_pitfalls(task, num=None):
+    if(num is None):
+        goal_num = max(0, random.randint(-50, 150))
+    else:
+        goal_num = num
+    repetitive_loc = [loc for loc, _ in task['born_loc']]
+    for goal in task["goals"]:
+        if(goal.reward_type.find('t') != -1):
+            repetitive_loc.append(goal.position(0))
+    for i in range(goal_num):
+        goal = RandomGoal(task['ndim'],
+                                repetitive_position=repetitive_loc,
+                                is_pitfall=True,
+                                type='static',
+                                reward_type='t',
+                                box_size=task['box_size'])
+        repetitive_loc.append(goal.position(0))
+        task["goals"].append(goal)
+
+def sample_goal_potential_energy(task, num=None):
+    if(num is None):
+        goal_num = max(0, random.randint(-5, 5))
+    else:
+        goal_num = num
+    for i in range(goal_num):
+        task["goals"].append(RandomGoal(task['ndim'],
+                                is_pitfall=random.choice([True, False]),
+                                type='static',
+                                reward_type='p',
+                                box_size=task['box_size']))
+        
+def sample_goal_dynamic(task):
+    task["goals"].append(RandomGoal(task['ndim'],
+                                    type='fourier',
+                                    reward_type='f',
+                                    box_size=task['box_size']))
+
+def sample_universal_reward(task):
     ndim = task['ndim']
-    switch = RandomMLP(ndim, random.randint(ndim * 2, ndim *4), output_activation='sin')
-    penalty= min(0, random.normal() - 1.0)
-
-    return {"pitfalls_switch": switch, "pitfalls_penalty": penalty}
-
-def sample_potential_energy(task):
-    ndim = task['ndim']
-    potential_energy = RandomMLP(ndim, 1, n_hidden_layers=random.randint(ndim * 2, ndim *4), output_activation='bounded(-1,1)')
-    return {"potential_energy": potential_energy}
-
-def sample_consistent_reward(task):
-    ndim = task['ndim']
-    goal_reward = RandomMLP(2 * ndim, 1, n_hidden_layers=random.randint(ndim * 2, ndim *4), output_activation='bounded(-1,1)')
-    return {"goal_reward": goal_reward}
-
-def sample_dynamic_goal(task, max_order=16, max_item=3):
-    num = random.randint(0, 4)
-    item_num = random.randint(0, max_item + 1)
-    dgoal_loc = [(0, random.normal(size=(task['ndim'], 2)))]
-    for j in range(item_num):
-        # Sample a cos nx + b cos ny
-        order = random.randint(1, max_order + 1)
-        factor = random.normal(size=(task['ndim'], 2))
-        dgoal_loc.append((order, factor))
-    r_range = random.uniform(0.10, 0.50)
-    dr = random.exponential(2.0)
-    return {"goal_loc": dgoal_loc, "goal_potential": (r_range, dr)}
+    random_reward_fields = RandomMLP(ndim, 1, 
+                        n_hidden_layers=random.randint(ndim * 2, ndim *4), 
+                        activation=['sin', 'tanh'],
+                        biases=[True, False])
+    factor = random.exponential(1.0)
+    func = lambda x: factor * max(random_reward_fields(x) - 0.5, 0.0)
+    return {"random_reward_fields": func}
 
 def AnyMDPv2TaskSampler(state_dim:int=256,
                  action_dim:int=256,
@@ -105,38 +125,38 @@ def AnyMDPv2TaskSampler(state_dim:int=256,
         random.seed(pseudo_random_seed())
 
     task = dict()
-    mode = random.choice(["static", "dynamic", "multi", "consis"])
-    # sgoal: static goal, one-step reward with reset
-    # dgoal: moving goal, continuous reward
-    # disp: displacement, one-step reward without reset
+    mode = random.choice(["static", "dynamic", "universal"])
+    # static: static goal, one-step reward with reset
+    # dynamic: moving goal, continuous reward
+    # universal: an random reward field generated by a neural network
 
     task["mode"] = mode
+    task["box_size"] = 2
     task["state_dim"] = state_dim
     task["action_dim"] = action_dim
-    task["ndim"] = random.randint(3, 33) # At most 32-dimensional space
+    task["ndim"] = random.randint(4, 16) # At most 32-dimensional space
     task["max_steps"] = random.randint(100, 1000) # At most 10-dimensional space
-    task["action_weight"] = random.uniform(5.0e-3, 0.10, size=(task['ndim'],))
+    task["action_weight"] = random.uniform(0.01, 0.05, size=(task['ndim'],))
     task["average_cost"] = random.exponential(0.01) * random.choice([-2, -1, 0, 1])
-    task["transition_noise"] = max(0, random.normal(scale=5.0e-3))
-    task["reward_noise"] = max(0, random.normal(scale=5.0e-3))
-    task["use_potential"] = random.randint(0, 2)
-    task["risk_limit"] = random.uniform(0.30, 0.55)
+    task["transition_noise"] = max(0, random.normal(scale=1.0e-4))
+    task["reward_noise"] = max(0, random.normal(scale=1.0e-4))
+
+    task["goals"] = []
 
     task.update(sample_observation_mapping(task)) # Observation Model
     task.update(sample_action_mapping(task)) # Action Mapping
     task.update(sample_born_loc(task)) # Born Location
 
     if(task['mode'] == 'static') :
-        task.update(sample_static_goal(task), num=1) # Static Goal Location
-    elif(task['mode'] == 'multi') :
-        task.update(sample_static_goal(task)) # Static Goal Location
+        sample_goal_statictrigger(task, num=1) # Static Goal Location
     elif(task['mode'] == 'dynamic'):
-        task.update(sample_dynamic_goal(task)) # Moving Goal Location
-    elif(task['mode'] == 'consis'):
-        task.update(sample_consistent_reward(task))
-    else:
-        raise ValueError(f"Unknown task type {task['mode']}")
-    task.update(sample_pitfalls(task)) # Pitfall Location
-    task.update(sample_potential_energy(task)) # Potential Energy
+        sample_goal_dynamic(task) # Moving Goal Location
+    elif(task['mode'] == 'universal'):
+        task.update(sample_universal_reward(task)) # Others, use a random field
+
+    if(random.random() < 0.7):
+        sample_goal_pitfalls(task)
+    if(random.random() < 0.5):
+        sample_goal_potential_energy(task)
 
     return task

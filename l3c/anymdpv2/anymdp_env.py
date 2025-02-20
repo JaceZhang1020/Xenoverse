@@ -22,16 +22,19 @@ class AnyMDPEnv(gym.Env):
         self.max_steps = max_steps
         self.task_set = False
 
-    def set_task(self, task):
+    def set_task(self, task, verbose=False, reward_shaping=False):
         for key in task:
             setattr(self, key, task[key])
         # 定义无界的 observation_space
         self.observation_space = gym.spaces.Box(low=-numpy.inf, high=numpy.inf, shape=(self.state_dim,), dtype=float)
         # 定义 action_space
         self.action_space = gym.spaces.Box(low=-1, high=1, shape=(self.action_dim,), dtype=float)
-
         self.task_set = True
         self.need_reset = True
+        self.reward_shaping = reward_shaping
+        if(verbose):
+            print('Task Mode:', self.mode)
+            print('ndim:', self.ndim)
 
     def reset(self):
         if(not self.task_set):
@@ -44,111 +47,53 @@ class AnyMDPEnv(gym.Env):
         loc, noise = rnd.choice(self.born_loc)
         self._inner_state = loc + noise * random.normal(size=self.ndim)
         self._state = self.observation_map(self._inner_state)
-        if(self.mode == 'multi'):
-            self.available_goal = deepcopy(self.goal_loc)
-        return self._state, {"steps": self.steps}
-    
-    def near_born_loc(self):
-        for loc, noise in self.born_loc:
-            dist = numpy.linalg.norm(self._inner_state - loc)
-            if(dist < noise * 3):
-                return True
-        return False
 
-    def calculate_loc(self, loc, steps):
-        # Sample a cos nx + b cos ny
-        g_loc = numpy.zeros(self.ndim)
-        for n, k in loc:
-            g_loc += k[:, 0] * numpy.cos(0.01 * n * self.steps) + k[:, 1] * numpy.sin(0.01 * n * self.steps)
-        return g_loc / len(loc)
-    
-    def goal_reward_static(self, ns):
-        min_dist = numpy.inf
-        reward = 0
-        done = False
-        for gs, d, gr in self.goal_loc:
-            dist = numpy.linalg.norm(ns - gs)
-            if(dist < d):
-                reward += gr
-                done = True
-                break
-        return reward, done
-    
-    def goal_reward_multi(self, ns):
-        min_dist = numpy.inf
-        reward = 0
-        for gs, d, gr in self.available_goal:
-            dist = numpy.linalg.norm(ns - gs)
-            if(dist < d):
-                reward += gr
-                self.available_goal.remove((gs, d, gr))
-                break
-        return reward, False
-    
-    def goal_reward_dynamic(self, ns):
-        goal_loc = self.calculate_loc(self.goal_loc, self.steps)
-        goal_dist = numpy.linalg.norm(ns - goal_loc)
-        reward = 0
-        if(goal_dist < self.goal_potential[0]):
-            reward = self.goal_potential[1] * (1 - goal_dist / self.goal_potential[0])
-        goal_loc = goal_loc
-        return reward, False
-    
-    def goal_reward_consist(self, ns):
-        reward = self.goal_reward(numpy.concat([self.inner_state, ns], dtype=numpy.float32))[0]
-        return reward, False
+        return self._state, {"steps": self.steps}
 
     def step(self, action):
         if(self.need_reset or not self.task_set):
             raise Exception("Must \"set_task\" and \"reset\" before doing any actions")
         assert numpy.shape(action) == (self.action_dim,)
 
-        ### update inner state
-        inner_deta = self.action_map(numpy.concat([self._inner_state, numpy.array(action)], axis=-1))
+        ### update inner state (dynamics)
+        inner_deta = self.action_map(self._inner_state, action)
+        #print('inner_deta: ', inner_deta)
+        #print("inner_state: ", self._inner_state)
         next_inner_state = (self._inner_state + 
             inner_deta * self.action_weight + 
             self.transition_noise * random.normal(size=(self.ndim,)))
 
-        ### basic reward
-        reward = self.average_cost + self.reward_noise * random.normal()
+        ### Essential Rewards specified by different goals
+        reward = self.average_cost
         done = False
-        if(self.mode == 'static'):
-            reward, done = self.goal_reward_static(next_inner_state)
-        elif(self.mode == 'multi'):
-            reward, done = self.goal_reward_multi(next_inner_state)
-            if(len(self.available_goal) == 0):
-                done = True
-        elif(self.mode == 'dynamic'):
-            reward, done = self.goal_reward_dynamic(next_inner_state)
-        elif(self.mode == 'consis'):
-            reward, done = self.goal_reward_consist(next_inner_state)
-        else:
-            raise ValueError(f"Unknown mode: {self.mode}")
+        for goal in self.goals:
+            r,d,info=goal(self._inner_state, next_inner_state, t=self.steps, need_reward_shaping=self.reward_shaping)
+            if(self.reward_shaping):
+                r = info["shaped_reward"]
+            reward += r
+            done = done or d
 
-        ### Calculate Pitfalls
-        if(done is not True):
-            pitfall_penalty = 0
-            switch = self.pitfalls_switch(next_inner_state)
-            risk = numpy.sum((switch < 0.0).astype('float32')) / numpy.size(switch)
-            if(risk > self.risk_limit and not self.near_born_loc()):
-                # Can not have pitfalls near born loc
-                reward += self.pitfalls_penalty
-                done = True
+        ### Calculate Universal Random Reward
+        if("random_reward_fields" in self.__dict__):
+            reward += self.random_reward_fields(self._inner_state)
 
-        ### Calculate Potential Energy
-        if(self.use_potential):
-            reward += (self.potential_energy(next_inner_state)[0] - self.potential_energy(self._inner_state)[0])
+        ### Add Noise to Reward
+        if(abs(reward) > 0.5):
+            reward *= 1.0 + self.reward_noise * random.normal()
 
+        ### update state (observation)
         self.steps += 1
         info = {"steps": self.steps}
-
         self._inner_state = next_inner_state
-
         self._state = self.observation_map(self._inner_state)
+        oob = (numpy.abs(self._inner_state) > self.box_size)
+        done = (self.steps >= self.max_steps or done or oob.any())
 
-        done = (self.steps >= self.max_steps or done)
+        #print("observation：", self._state)
+
         if(done):
             self.need_reset = True
+
         return self._state, reward, done, info
     
     @property
@@ -157,5 +102,4 @@ class AnyMDPEnv(gym.Env):
     
     @property
     def inner_state(self):
-        # 复制内部状态
         return numpy.copy(self._inner_state)
