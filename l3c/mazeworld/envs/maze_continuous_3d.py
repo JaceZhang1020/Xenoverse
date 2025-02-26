@@ -21,7 +21,6 @@ class MazeCoreContinuous3D(MazeBase):
             self,
             collision_dist=0.20, #collision distance
             visibility_3D=12.0, #agent vision range
-            fol_angle = 0.6 * PI, #Field of View
             resolution_horizon = 320, #resolution in horizontal
             resolution_vertical = 320, #resolution in vertical
             max_steps = 5000,
@@ -30,7 +29,6 @@ class MazeCoreContinuous3D(MazeBase):
         super(MazeCoreContinuous3D, self).__init__(
                 collision_dist = collision_dist,
                 visibility_3D = visibility_3D,
-                fol_angle = fol_angle,
                 resolution_horizon = resolution_horizon,
                 resolution_vertical = resolution_vertical,
                 max_steps = max_steps,
@@ -100,7 +98,7 @@ class MazeCoreContinuous3D(MazeBase):
                 self._cell_walls, self._cell_landmarks, self._cell_texts, self._cell_size, 
                 MAZE_TASK_MANAGER.textlib_walls, MAZE_TASK_MANAGER.textlib_grounds[self._ground_text], MAZE_TASK_MANAGER.textlib_ceilings[self._ceiling_text],
                 self._wall_height, 1.0, self.visibility_3D, 0.20, 
-                self.fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
+                self._fol_angle, self.resolution_horizon, self.resolution_vertical, landmarks_rgb_arr)
         if(self.command_in_observation):
             start_x = int(self._navbar_start_x)
             start_y = int(self._navbar_start_y)

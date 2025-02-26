@@ -37,6 +37,7 @@ class MazeBase(object):
         self._commands_sequence = task_config["commands_sequence"]
         self._ground_text = task_config["ground_text"]
         self._ceiling_text = task_config["ceiling_text"]
+        self._fol_angle = task_config["fol_angle"]
         self._int_max = 100000000
         self._commands_maxlife = 500
 

@@ -4,7 +4,7 @@ import argparse
 import time
 import l3c.mazeworld
 from l3c.mazeworld import MazeTaskSampler
-from l3c.mazeworld.agents import SmartSLAMAgent
+from l3c.mazeworld.agents import SmartSLAMAgent, OracleAgent
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser(description='Playing the maze world demo with your keyboard')
@@ -13,6 +13,7 @@ if __name__=='__main__':
     parser.add_argument('--save_replay', type=str, default=None, help="Save the replay trajectory in file")
     parser.add_argument('--memory_keep_ratio', type=float, default=1.0, 
                         help="Keep ratio of memory when the agent switch from short to long term memory. 1.0 means perfect memory, 0.0 means no memory")
+    parser.add_argument('--oracle', type=bool, default=False)
     parser.add_argument('--verbose', type=bool, default=False)
 
     args = parser.parse_args()
@@ -26,7 +27,10 @@ if __name__=='__main__':
     maze_env.set_task(task)
 
     # create an smart SLAM agent
-    agent = SmartSLAMAgent(maze_env=maze_env, memory_keep_ratio=args.memory_keep_ratio, render=True)
+    if(args.oracle):
+        agent = OracleAgent(maze_env=maze_env, render=True)
+    else:
+        agent = SmartSLAMAgent(maze_env=maze_env, memory_keep_ratio=args.memory_keep_ratio, render=True)
 
     observation, _ = maze_env.reset()
     done=False

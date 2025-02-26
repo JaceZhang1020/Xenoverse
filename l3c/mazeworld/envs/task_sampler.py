@@ -11,6 +11,7 @@ from numpy.linalg import norm
 from copy import deepcopy
 from l3c.mazeworld.envs.grid_ops import genmaze_by_primwall
 from l3c.utils import pseudo_random_seed
+from l3c.mazeworld.envs.dynamics import PI
 
 
 def gentext(cell_walls, textlib_walls, textlib_grounds, textlib_ceilings):
@@ -98,6 +99,7 @@ class MazeTaskManager(object):
             agent_height_range=(1.6, 2.0),
             wall_density_range=(0.2, 0.4),
             landmarks_number_range=(5, 15),
+            fol_angle_range=(0.3*PI, 0.8*PI),
             commands_sequence=200,
             step_reward=0.0,
             collision_reward=-0.20,
@@ -139,6 +141,10 @@ class MazeTaskManager(object):
         # Generate start location
         start = genstart(cell_walls, cell_landmarks)
 
+        # Sample FOL (field of view)
+        fol_angle = random.uniform(*fol_angle_range)
+
+
         #Calculate goal reward
         if(goal_reward is None):
             def_goal_reward = n * numpy.sqrt(n) / 60.0
@@ -160,6 +166,7 @@ class MazeTaskManager(object):
                 "collision_reward":collision_reward,
                 "wall_height":wall_height,
                 "agent_height":agent_height,
+                "fol_angle":fol_angle,
                 "commands_sequence":commands_sequence,
                 "landmarks_coordinates":landmarks,
                 "cell_landmarks":cell_landmarks}
