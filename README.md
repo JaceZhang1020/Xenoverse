@@ -1,4 +1,4 @@
-# Xenoverse: Toward Training General-Purpose Learning Agents (GLA) with worlds from xenoverse
+# Xenoverse: Toward Training General-Purpose Learning Agents (GLA) with Randomized Worlds
 
 ## xenoverse instead of a single universe
 
