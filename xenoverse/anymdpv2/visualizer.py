@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.datasets import load_digits
 from .anymdp_env import AnyMDPEnv
-from l3c.utils import pseudo_random_seed
+from xenoverse.utils import pseudo_random_seed
 from restools.plotting.plot_2D import savitzky_golay
 
 class AnyMDPv2Visualizer(AnyMDPEnv):
@@ -29,19 +29,19 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
         return obs
     
     def step(self, action):
-    	result = super().step(action)
-    	# 判断返回结果的长度来兼容旧版和新版 Gym
-    	if len(result) == 5:
-        	obs, reward, terminated, truncated, info = result
-        	done = terminated or truncated
-    	else:
-        	obs, reward, done, info = result
+        result = super().step(action)
+        # 判断返回结果的长度来兼容旧版和新版 Gym
+        if len(result) == 5:
+            obs, reward, terminated, truncated, info = result
+            done = terminated or truncated
+        else:
+            obs, reward, done, info = result
 
-    	self.observation_records.append(numpy.copy(obs))
-    	self.inner_state_records.append(numpy.copy(self.inner_state))
-    	self.action_records.append(numpy.copy(action))
-    	self.reward_records.append(reward)
-    	return obs, reward, done, info
+        self.observation_records.append(numpy.copy(obs))
+        self.inner_state_records.append(numpy.copy(self.inner_state))
+        self.action_records.append(numpy.copy(action))
+        self.reward_records.append(reward)
+        return obs, reward, done, info
 
     def visualize_and_save(self, filename=None):
         tsne = TSNE(n_components=2, random_state=pseudo_random_seed(),
