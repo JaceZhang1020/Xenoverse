@@ -9,7 +9,7 @@ from numpy import random
 
 from gym import error, spaces, utils
 from gym.utils import seeding
-from l3c.utils import pseudo_random_seed
+from xenoverse.utils import pseudo_random_seed
 from copy import deepcopy
 
 class AnyMDPEnv(gym.Env):

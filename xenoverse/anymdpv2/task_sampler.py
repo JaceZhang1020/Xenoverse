@@ -7,7 +7,7 @@ import pygame
 import time
 from numpy import random
 from copy import deepcopy
-from l3c.utils import pseudo_random_seed, RandomMLP, RandomGoal
+from xenoverse.utils import pseudo_random_seed, RandomMLP, RandomGoal
 
 def sample_action_mapping(task):
     ndim = task['ndim']
