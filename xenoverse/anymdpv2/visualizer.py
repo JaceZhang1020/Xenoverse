@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.datasets import load_digits
 from .anymdp_env import AnyMDPEnv
-from l3c.utils import pseudo_random_seed
+from xenoverse.utils import pseudo_random_seed
 from restools.plotting.plot_2D import savitzky_golay
 
 class AnyMDPv2Visualizer(AnyMDPEnv):
