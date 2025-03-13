@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from sklearn.datasets import load_digits
 from .anymdp_env import AnyMDPEnv
-from xenoverse.utils import pseudo_random_seed
+from l3c.utils import pseudo_random_seed
 from restools.plotting.plot_2D import savitzky_golay
 
 class AnyMDPv2Visualizer(AnyMDPEnv):
@@ -30,6 +30,7 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
     
     def step(self, action):
         result = super().step(action)
+        # 判断返回结果的长度来兼容旧版和新版 Gym
         if len(result) == 5:
             obs, reward, terminated, truncated, info = result
             done = terminated or truncated
