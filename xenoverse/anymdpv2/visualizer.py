@@ -30,7 +30,6 @@ class AnyMDPv2Visualizer(AnyMDPEnv):
     
     def step(self, action):
         result = super().step(action)
-        # 判断返回结果的长度来兼容旧版和新版 Gym
         if len(result) == 5:
             obs, reward, terminated, truncated, info = result
             done = terminated or truncated
